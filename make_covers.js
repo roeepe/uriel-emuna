@@ -1,43 +1,80 @@
+// מייצר עטיפה לכל סדרה מתוך עטיפת הכוזרי המקורית.
+//
+// לא מציירים עטיפה חדשה: לוקחים את התמונה כמו שהיא, מכסים *רק* את שורת
+// הכותרת בטלאי שנחתך מרצועת הקלף הנקייה שמעליה, וכותבים שם את המשפט של
+// הסדרה. התצלום, מרקם הקלף והשורה «עם הרב בן ציון אוריאל» נשארים מקוריים
+// פיקסל-בפיקסל, ולכן כל עשר העטיפות נראות כמו משפחה אחת.
+//
+// הגבולות נמדדו מהתמונה עצמה (כהות לפי שורה), לא בעין:
+//   2631-2710  רצועת קלף נקייה  <- ממנה נחתך הטלאי
+//   2711-2833  שורת הכותרת      <- זה מה שמוחלף
+//   2854-      «עם הרב בן ציון אוריאל»
+//
+// 🚨 המדידה הראשונה נתנה 2727 כתחילת הכותרת, כי היא ספרה שורה כ"טקסט" רק
+//    מ-60 פיקסלים כהים ומעלה — וראש הלמ"ד הוא קו דק שלא עבר את הסף. ארבעת
+//    הפיקסלים שנשארו חשופים נראו כמו שריטה ליד הכותרת החדשה.
 const { chromium } = require('/srv/graphic-dev/node_modules/.pnpm/playwright@1.49.1/node_modules/playwright');
 const fs = require('fs');
-const index = JSON.parse(fs.readFileSync('site/public/data/index.json', 'utf8'));
+const path = require('path');
 
-const tpl = (name, sub) => `<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;600;700&display=swap" rel="stylesheet">
+const SIZE = 3000;
+const TITLE_TOP = 2711, TITLE_BOT = 2833;
+const PATCH_TOP = 2633, PATCH_H = 76;
+const COVER_TOP = TITLE_TOP - 6, COVER_BOT = TITLE_BOT + 8;
+
+const titles = JSON.parse(fs.readFileSync('data/cover_titles.json', 'utf8'));
+const b64 = f => fs.readFileSync(f).toString('base64');
+const BASE = 'data:image/jpeg;base64,' + b64('base.jpg');
+const PATCH = 'data:image/png;base64,' + b64('insp/patch.png');
+
+const page = (text) => `<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
-*{margin:0;box-sizing:border-box}
-body{width:1500px;height:1500px;display:flex;align-items:center;justify-content:center;
-  font-family:"Noto Sans Hebrew",sans-serif;background:#F1EADC;
-  background-image:radial-gradient(circle at 30% 20%, #FFFDF8 0%, #F1EADC 55%, #E4D9C0 100%);}
-.frame{width:1320px;height:1320px;border:3px solid #C3B08A;border-radius:40px;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:90px;text-align:center;position:relative;background:rgba(255,253,248,.55)}
-.frame::before,.frame::after{content:"";position:absolute;inset-inline:120px;height:2px;background:#C3B08A}
-.frame::before{top:64px}.frame::after{bottom:64px}
-.kicker{font-size:40px;font-weight:600;letter-spacing:.22em;color:#8A6D3B;margin-bottom:54px}
-h1{font-size:${name.length > 22 ? 96 : name.length > 14 ? 116 : 136}px;font-weight:700;
-  line-height:1.18;color:#241F17;letter-spacing:-.02em;max-width:1050px}
-.rule{width:170px;height:5px;background:#8A6D3B;border-radius:3px;margin:58px 0}
-.by{font-size:52px;font-weight:600;color:#5A5143}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:${SIZE}px;height:${SIZE}px;overflow:hidden}
+  .base{position:absolute;inset:0;width:${SIZE}px;height:${SIZE}px}
+  /* הטלאי: אותה רצועת קלף, נמתחת אנכית בלבד כדי לשמור על כיוון הסיבים */
+  .patch{position:absolute;left:0;top:${COVER_TOP}px;width:${SIZE}px;
+         height:${COVER_BOT - COVER_TOP}px;
+         background-image:url('${PATCH}');
+         background-size:${SIZE}px ${PATCH_H}px;
+         background-repeat:repeat-y}
+  .title{position:absolute;left:0;top:${COVER_TOP}px;width:${SIZE}px;
+         height:${COVER_BOT - COVER_TOP}px;
+         display:flex;align-items:center;justify-content:center;
+         font-family:'Heebo',sans-serif;font-weight:800;color:#1E1A15;
+         letter-spacing:-0.005em;white-space:nowrap;line-height:1}
 </style></head><body>
-<div class="frame">
-  <div class="kicker">שיעורי אמונה</div>
-  <h1>${name}</h1>
-  <div class="rule"></div>
-  <div class="by">${sub}</div>
-</div></body></html>`;
+  <img class="base" src="${BASE}">
+  <div class="patch"></div>
+  <div class="title"><span id="t">${text}</span></div>
+</body></html>`;
 
 (async () => {
   const b = await chromium.launch({ args: ['--no-sandbox'] });
-  const ctx = await b.newContext({ viewport: { width: 1500, height: 1500 }, locale: 'he-IL' });
+  const ctx = await b.newContext({ viewport: { width: SIZE, height: SIZE }, locale: 'he-IL' });
   const p = await ctx.newPage();
-  for (const s of index) {
-    if (s.slug === 'kuzari') continue;
-    const name = s.name.replace(/^(כתבי|תורת)\s+/, m => m).trim();
-    await p.setContent(tpl(name, 'הרב בן ציון אוריאל'), { waitUntil: 'networkidle' });
-    await p.waitForTimeout(700);
-    await p.screenshot({ path: `site/public/cover/${s.slug}.png` });
-    console.log('cover:', s.slug, '|', name);
+  fs.mkdirSync('covers', { recursive: true });
+
+  for (const [slug, text] of Object.entries(titles)) {
+    await p.setContent(page(text), { waitUntil: 'networkidle' });
+    await p.evaluate(() => document.fonts.ready);
+    // גודל אחיד לכל המשפחה, ומתכווץ רק אם המשפט באמת ארוך מדי
+    // 🚨 למדוד את הטקסט, לא את המיכל: המיכל הוא flex ברוחב 3000, ולכן
+    //    scrollWidth שלו תמיד 3000 והכותרת הצטמצמה למינימום בכל הסדרות.
+    const size = await p.evaluate((maxW) => {
+      const el = document.getElementById('t');
+      const box = el.parentElement;
+      let fs = 150;
+      box.style.fontSize = fs + 'px';
+      while (el.getBoundingClientRect().width > maxW && fs > 100) {
+        fs -= 2; box.style.fontSize = fs + 'px';
+      }
+      return fs;
+    }, 2280);
+    await p.waitForTimeout(250);
+    await p.screenshot({ path: `covers/${slug}.png` });
+    console.log(`${slug.padEnd(11)} ${String(size).padStart(3)}px  ${text}`);
   }
   await b.close();
 })();
