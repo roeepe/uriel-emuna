@@ -230,8 +230,9 @@ def compose(slug, s):
             para.append(loc.rstrip(". ") + ".")
         if doc and doc.get("summary"):
             para.append(doc["summary"])
-        if sec:
-            para.append("מתוך: " + " · ".join(sec))
+        # 🚨 שורת «מתוך:» נבנית בשלב האתר ולא כאן. אחרי שמורה הנבוכים פוצל
+        #    לשני פודקאסטים, שתי הרמות העליונות הפכו לשם הפודקאסט עצמו —
+        #    ותיאור שנכתב כאן היה חוזר עליהן בכל אחד מ-426 השיעורים.
         if doc and doc.get("date"):
             para.append(doc["date"])
 

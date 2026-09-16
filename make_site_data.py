@@ -87,7 +87,8 @@ for slug, s in comp.items():
         items.append({
             "n": seq,
             "title": f'{it.get("title_base", it.get("title", ""))} #{seq}',
-            "desc": it["description_html"],
+            "desc": (it["description_html"]
+                     + (f"<p>מתוך: {' · '.join(sec)}</p>" if sec else "")),
             "sec": sec,
             "part": part,
             "url": f"https://github.com/{repo}/releases/download/{tag}/{it['asset']}",
