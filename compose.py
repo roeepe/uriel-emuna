@@ -235,7 +235,7 @@ def compose(slug, s):
         if doc and doc.get("date"):
             para.append(doc["date"])
 
-        it["title"] = f"{title} #{it['n']}"
+        it["title_base"] = title
         it["description_html"] = "".join(f"<p>{p}</p>" for p in para)
         it["source"] = ("filename" if is_topic(rest) else
                         "doc" if doc and doc.get("title") else "structure")
@@ -250,7 +250,7 @@ def main():
         c = Counter(i["source"] for i in s["items"])
         print(f"    כותרות: משם ההקלטה {c['filename']} · ממסמך {c['doc']} · ממבנה {c['structure']}")
         for i in [s["items"][0], s["items"][len(s['items'])//2]]:
-            print(f"    #{i['n']} [{i['source']}] {i['title'][:82]}")
+            print(f"    #{i['n']} [{i['source']}] {i['title_base'][:82]}")
             print(f"        {re.sub('<[^>]+>',' ',i['description_html'])[:130]}")
     json.dump(raw, open(os.path.join(D, "episodes_composed.json"), "w"), ensure_ascii=False)
     tot = sum(len(s["items"]) for s in raw.values())

@@ -31,15 +31,51 @@ def parts_of(items):
         out[name] = (n >= 150 and len(ch) >= 2)
     return out
 
+# סדרה אחת בדרייב יכולה להיות כמה פודקאסטים. במורה הנבוכים יש שני סבבי
+# לימוד שלמים של אותו ספר, והרב ביקש שכל סבב יהיה פודקאסט בפני עצמו.
+def _moreh(sec, word):
+    return len(sec) > 1 and "מורה" in sec[0] and word in sec[1]
+
+SPLITS = {
+    "rambam": [
+        ("rambam", 'כתבי הרמב"ם — הקדמות וספר המצוות',
+         lambda sec: not (sec and "מורה" in sec[0])),
+        ("moreh-rishon", 'מורה הנבוכים — סבב לימוד ראשון, תש"פ-תשפ"א',
+         lambda sec: _moreh(sec, "ראשון")),
+        ("moreh-sheni", 'מורה הנבוכים — סבב לימוד שני, תשפ"ב-תשפ"ג',
+         lambda sec: _moreh(sec, "שני")),
+    ],
+}
+
 comp = json.load(open(f"{D}/episodes_composed.json"))
+# הסדרה שפוצלה יורדת מהרשימה, ובמקומה נכנסים החלקים שלה
+expanded = {}
+for _slug, _s in comp.items():
+    if _slug not in SPLITS:
+        expanded[_slug] = _s
+        continue
+    for out_slug, out_name, pred in SPLITS[_slug]:
+        picked = [i for i in _s["items"] if pred([x for x in i["section"] if x])]
+        # כשכל הפודקאסט הוא «מורה הנבוכים, סבב X», אין טעם לחזור על זה
+        # בכל שורה — מורידים את שתי הרמות שהפכו לשם הפודקאסט עצמו
+        drop = 2 if out_slug != _slug else 0
+        for i in picked:
+            i = dict(i)
+            i["section"] = [x for x in i["section"] if x][drop:]
+        expanded[out_slug] = {"name": out_name, "series": _s["series"],
+                              "items": [{**i, "section": [x for x in i["section"] if x][drop:]}
+                                        for i in picked]}
+comp = expanded
 index = []
 for slug, s in comp.items():
     repo = f"roeepe/uriel-audio-{slug}"
     split = parts_of([x for x in s["items"] if x.get("ready")])
     items, secs = [], []
+    seq = 0
     for it in s["items"]:
         if not it.get("ready"):
             continue
+        seq += 1
         tag = it.get("tag", "audio")
         sec = [x for x in it["section"] if x]
         part = ""
@@ -49,8 +85,8 @@ for slug, s in comp.items():
         if sec and (not secs or secs[-1] != sec):
             secs.append(sec)
         items.append({
-            "n": it["n"],
-            "title": it["title"],
+            "n": seq,
+            "title": f'{it.get("title_base", it.get("title", ""))} #{seq}',
             "desc": it["description_html"],
             "sec": sec,
             "part": part,
@@ -83,12 +119,15 @@ index[0]["hours"] = round(sum(
 
 json.dump(index, open(f"{OUT}/index.json", "w"), ensure_ascii=False)
 
-# מפתח חיפוש רזה על פני כל הסדרות
+# מפתח חיפוש רזה על פני כל הסדרות — נבנה מקובצי האתר, כדי שהכותרת והמספר
+# שבחיפוש יהיו בדיוק אלה שבעמוד (אחרי הפיצול והמספור מחדש)
 search = []
-for slug, s in comp.items():
-    for it in s["items"]:
-        if it.get("ready"):
-            search.append([slug, it["n"], it["title"]])
+for x in index:
+    if x.get("external"):
+        continue
+    dd = json.load(open(f"{OUT}/{x['slug']}.json"))
+    for it in dd["items"]:
+        search.append([x["slug"], it["n"], it["title"]])
 for e in kz:
     search.append(["kuzari", e["n"], e["title"]])
 json.dump(search, open(f"{OUT}/search.json", "w"), ensure_ascii=False)
