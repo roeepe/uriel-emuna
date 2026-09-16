@@ -54,9 +54,16 @@ module.exports = (req, res) => {
       <itunes:explicit>false</itunes:explicit>
     </item>`).join('\n');
 
-  const desc = `סדרת שיעורים ב${d.name} מאת ${AUTHOR}. ` +
-    `${d.count} שיעורים, ${d.hours} שעות לימוד, לאורך כל הספר. ` +
-    `שיעור חדש בכל יום ראשון עד חמישי.`;
+  // 🚨 תיאור שמתחלף מעצמו. סדרה שממתינה לסדרה אחרת אומרת מתי היא תתחיל,
+  //    וברגע שהיא באמת מתחילה — התיאור מתחלף לתיאור הרגיל בלי שאיש נוגע.
+  //    זה עובד כי הפיד מחושב בכל בקשה, ולכן "עכשיו" תמיד עדכני.
+  const waiting = d.waitingDesc && d.startsAt &&
+                  new Date(d.startsAt).getTime() > now;
+  const desc = waiting
+    ? `${d.waitingDesc} — ${AUTHOR}.`
+    : `סדרת שיעורים ב${d.name} מאת ${AUTHOR}. ` +
+      `${d.count} שיעורים, ${d.hours} שעות לימוד, לאורך כל הספר. ` +
+      `שיעור חדש בכל יום ראשון עד חמישי.`;
 
   res.setHeader('Content-Type', 'application/rss+xml; charset=utf-8');
   res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=120');

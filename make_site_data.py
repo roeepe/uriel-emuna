@@ -29,6 +29,9 @@ def _skip_days():
     return out
 
 SKIP = _skip_days()
+# עד איזו שנה יש לנו לוח חגים. מעבר לזה הלוח "נקי" מדי והתזמון היה מפרסם
+# שיעורים בחגים בלי שאיש ישים לב.
+CAL_LAST = max(int(f[-9:-5]) for f in glob.glob(f"{D}/hebcal-*.json"))
 
 def schedule(n, start):
     """n תאריכי פרסום, יום א׳-ה׳ בשעה 15:00, מדלג על חגים ומועדים."""
@@ -37,12 +40,29 @@ def schedule(n, start):
         if d.weekday() in (6, 0, 1, 2, 3) and d.isoformat() not in SKIP:
             out.append(datetime(d.year, d.month, d.day, 15, 0, tzinfo=IL).isoformat())
         d += timedelta(days=1)
+    if out and datetime.fromisoformat(out[-1]).year > CAL_LAST:
+        raise SystemExit(
+            f"התזמון חורג אל {datetime.fromisoformat(out[-1]).year}, "
+            f"ולוח החגים מגיע רק עד {CAL_LAST}. להוריד עוד שנה מ-hebcal "
+            f"לפני שממשיכים, אחרת יתפרסמו שיעורים בחגים.")
     return out
 
 # 🚨 מתחילים שבועיים אחורה, לא מחר: פיד שכל הפרקים בו עתידיים יוצא ריק,
 #    וספוטיפיי לא מקבל פיד ריק. ככה כל סדרה נולדת עם כ-10 פרקים באוויר,
 #    ומשם ממשיכה שיעור ביום.
 START = datetime.now(IL).date() - timedelta(days=14)
+
+# סדרה שממתינה לסדרה אחרת. שני הסבבים במורה הנבוכים הם אותו ספר, ואין טעם
+# שיתפרסמו במקביל — הסבב השני מתחיל רק אחרי שהראשון הסתיים.
+# `teaser` פרקים עולים מיד, רק כדי שהפיד לא ייצא ריק וספוטיפיי יקבל אותו.
+DEFER = {"moreh-sheni": {"after": "moreh-rishon", "teaser": 1}}
+
+HEB_MONTH = {1:"ינואר",2:"פברואר",3:"מרץ",4:"אפריל",5:"מאי",6:"יוני",7:"יולי",
+             8:"אוגוסט",9:"ספטמבר",10:"אוקטובר",11:"נובמבר",12:"דצמבר"}
+
+def heb_month_year(iso):
+    d = datetime.fromisoformat(iso)
+    return f"{HEB_MONTH[d.month]} {d.year}"
 
 def hhmmss(s):
     s = int(s or 0); return f"{s//3600:02d}:{s%3600//60:02d}:{s%60:02d}"
@@ -111,6 +131,7 @@ for _slug, _s in comp.items():
                                         for i in picked]}
 comp = expanded
 index = []
+built = {}
 for slug, s in comp.items():
     repo = f"roeepe/uriel-audio-{s.get('repo', slug)}"
     split = parts_of([x for x in s["items"] if x.get("ready")])
@@ -142,17 +163,45 @@ for slug, s in comp.items():
             "guid": str(uuid.uuid5(NS, it["asset"])),
             "src": it.get("source", "structure"),
         })
-    for it, when in zip(items, schedule(len(items), START)):
-        it["pub"] = when
     hours = round(sum(i["secs"] for i in items) / 3600)
-    json.dump({"slug": slug, "name": s["name"], "count": len(items),
-               "hours": hours, "links": LINKS.get(slug, {}), "items": items},
-              open(f"{OUT}/{slug}.json", "w"), ensure_ascii=False)
+    built[slug] = {"slug": slug, "name": s["name"], "count": len(items),
+                   "hours": hours, "links": LINKS.get(slug, {}), "items": items}
     tops = []
     for i in items:
         if i["part"] and i["part"] not in tops: tops.append(i["part"])
     index.append({"slug": slug, "name": s["name"], "count": len(items),
                   "hours": hours, "parts": tops[:8], "links": LINKS.get(slug, {})})
+
+for slug, d in built.items():
+    if slug in DEFER:
+        continue
+    for it, when in zip(d["items"], schedule(len(d["items"]), START)):
+        it["pub"] = when
+
+for slug, cfg in DEFER.items():
+    d = built.get(slug)
+    if not d:
+        continue
+    base = built.get(cfg["after"])
+    teaser = cfg["teaser"]
+    for it, when in zip(d["items"][:teaser], schedule(teaser, START)):
+        it["pub"] = when
+    # הסבב מתחיל ביום שאחרי הפרק האחרון של הסדרה שלפניו
+    after_last = datetime.fromisoformat(max(i["pub"] for i in base["items"])).date()
+    rest = d["items"][teaser:]
+    for it, when in zip(rest, schedule(len(rest), after_last + timedelta(days=1))):
+        it["pub"] = when
+    d["startsAt"] = rest[0]["pub"] if rest else None
+    when_txt = heb_month_year(d["startsAt"]) if d.get("startsAt") else ""
+    d["waitingDesc"] = (
+        f"הסבב השני של מורה הנבוכים יתחיל לעלות כאן ב{when_txt}, "
+        f"אחרי שיסתיים הסבב הראשון. בינתיים עולה שיעור הפתיחה בלבד — "
+        f"וכל {d['count']} השיעורים כבר זמינים להאזנה ולהורדה באתר.")
+    d["note"] = (f"בפודקאסט הסדרה תתחיל לעלות ב{when_txt}, אחרי שיסתיים הסבב "
+                 f"הראשון. באתר כל השיעורים זמינים כבר עכשיו.")
+
+for slug, d in built.items():
+    json.dump(d, open(f"{OUT}/{slug}.json", "w"), ensure_ascii=False)
 
 # הכוזרי חי בכתובת משלו ומחובר לספוטיפיי, ולכן הפיד שלו לא מוגש מכאן.
 # 🚨 אבל *עמוד* חייב להיות לו: בלעדיו הכרטיס בעמוד הבית מפנה ל-/s/kuzari,
