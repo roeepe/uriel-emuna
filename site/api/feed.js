@@ -31,18 +31,20 @@ module.exports = (req, res) => {
   const base = `https://${host}`;
   const cover = `${base}/cover/${slug}.jpg`;
 
-  // תאריך לכל פרק: סדרה שנלמדה לאורך שנים מוצגת בסדר הלימוד, ולכן הפרק
-  // הראשון הוא הישן ביותר. נותנים לכל פרק יום משלו לאחור מהיום, כדי
-  // שאפליקציות פודקאסט ישמרו על הסדר הנכון.
-  const day = 86400000;
-  const t0 = Date.UTC(2025, 0, 1);
-  const items = d.items.map((e, idx) => `    <item>
+  // 🚨 הפיד כולל רק פרקים שתאריך הפרסום שלהם כבר עבר. באתר כולם זמינים
+  //    מיד; כאן הם נכנסים בהדרגה, שיעור ביום א׳-ה׳. זה אותו עיקרון כמו
+  //    בכוזרי: הפרק "מופיע" מפני שמישהו ביקש את הפיד אחרי התאריך שנקבע לו,
+  //    ולא מפני שתהליך כלשהו רץ בלילה ופרסם אותו.
+  const now = Date.now();
+  const live = d.items.filter((e) => !e.pub || new Date(e.pub).getTime() <= now);
+
+  const items = live.map((e) => `    <item>
       <title>${cdata(e.title)}</title>
       <description>${cdata(e.desc || e.title)}</description>
       <itunes:summary>${cdata(e.desc || e.title)}</itunes:summary>
       <guid isPermaLink="false">${attr(e.guid)}</guid>
       <link>${attr(base)}/s/${slug}#ep${e.n}</link>
-      <pubDate>${new Date(t0 + idx * day).toUTCString()}</pubDate>
+      <pubDate>${new Date(e.pub).toUTCString()}</pubDate>
       <enclosure url="${attr(e.url)}" length="${e.size}" type="audio/mpeg"/>
       <itunes:duration>${e.dur}</itunes:duration>
       <itunes:episode>${e.n}</itunes:episode>
@@ -53,7 +55,8 @@ module.exports = (req, res) => {
     </item>`).join('\n');
 
   const desc = `סדרת שיעורים ב${d.name} מאת ${AUTHOR}. ` +
-    `${d.count} שיעורים, ${d.hours} שעות לימוד, לאורך כל הספר.`;
+    `${d.count} שיעורים, ${d.hours} שעות לימוד, לאורך כל הספר. ` +
+    `שיעור חדש בכל יום ראשון עד חמישי.`;
 
   res.setHeader('Content-Type', 'application/rss+xml; charset=utf-8');
   res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=120');

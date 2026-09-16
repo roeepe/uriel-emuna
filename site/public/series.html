@@ -117,6 +117,16 @@ document.getElementById('q').addEventListener('input', e => {
 });
 
 const strip = h => h.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+const fmtDate = new Intl.DateTimeFormat('he-IL', {day:'numeric', month:'long', year:'numeric'});
+
+// כל שיעור זמין כאן מיד. השורה הזו רק מספרת מתי הוא ייכנס לפודקאסט,
+// למי שעוקב אחרי הסדרה באפליקציה ולא באתר.
+function pending(i) {
+  if (!i.pub) return '';
+  const t = new Date(i.pub);
+  if (t <= new Date()) return '';
+  return `<span class="soon">בפודקאסט ב־${fmtDate.format(t)}</span>`;
+}
 
 function match(i) {
   if (filter !== 'all' && (i.part || (i.sec || [])[0]) !== filter) return false;
@@ -144,7 +154,14 @@ function render() {
       <button class="play" type="button" data-n="${i.n}" aria-label="נגן: ${esc(i.title)}">${ICON_PLAY}</button>
       <div>
         <h3 class="ep-title">${esc(i.title)}</h3>
-        <p class="ep-meta"><span>${i.dur.replace(/^00:/, '')}</span></p>
+        <p class="ep-meta">
+          <span>${i.dur.replace(/^00:/, '')}</span>
+          <a class="dl" href="${i.url}" download="${esc(i.title)}.mp3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7.5 11 4.5 4.5 4.5-4.5"/><path d="M5 19h14"/></svg>
+            הורדה
+          </a>
+          ${pending(i)}
+        </p>
         <div class="ep-desc">${i.desc}</div>
       </div>
     </li>`;

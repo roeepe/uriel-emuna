@@ -5,6 +5,45 @@ D = "data"; OUT = "site/public/data"
 NS = uuid.UUID("7a3c9d20-0000-4000-8000-757269656c00")
 LINKS = json.load(open(f"{D}/links.json"))
 
+# ---------- תזמון הפרסום לפודקאסט ----------
+# 🚨 האתר והפיד אינם אותו דבר: באתר *כל* השיעורים זמינים מיד להאזנה
+#    ולהורדה, ובפיד הם נכנסים בהדרגה — שיעור בכל יום א׳-ה׳ ב-15:00, בלי
+#    חגים. זה מה שמאפשר לפודקאסט להיראות חי לאורך זמן במקום להישפך בבת אחת.
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+IL = ZoneInfo("Asia/Jerusalem")
+
+def _skip_days():
+    keep_modern = {"יוֹם הַשּׁוֹאָה", "יוֹם הַזִּכָּרוֹן", "יוֹם הָעַצְמָאוּת", "יוֹם יְרוּשָׁלַיִם"}
+    keep_minor = {"שׁוּשָׁן פּוּרִים"}
+    out = set()
+    for y in range(2026, 2031):
+        f = f"{D}/hebcal-{y}.json"
+        if not os.path.exists(f): continue
+        for it in json.load(open(f))["items"]:
+            if it.get("category") != "holiday": continue
+            sub, title = it.get("subcat"), it["title"]
+            if sub == "major" or (sub == "modern" and title in keep_modern) \
+               or (sub == "minor" and title in keep_minor):
+                out.add(it["date"][:10])
+    return out
+
+SKIP = _skip_days()
+
+def schedule(n, start):
+    """n תאריכי פרסום, יום א׳-ה׳ בשעה 15:00, מדלג על חגים ומועדים."""
+    out, d = [], start
+    while len(out) < n:
+        if d.weekday() in (6, 0, 1, 2, 3) and d.isoformat() not in SKIP:
+            out.append(datetime(d.year, d.month, d.day, 15, 0, tzinfo=IL).isoformat())
+        d += timedelta(days=1)
+    return out
+
+# 🚨 מתחילים שבועיים אחורה, לא מחר: פיד שכל הפרקים בו עתידיים יוצא ריק,
+#    וספוטיפיי לא מקבל פיד ריק. ככה כל סדרה נולדת עם כ-10 פרקים באוויר,
+#    ומשם ממשיכה שיעור ביום.
+START = datetime.now(IL).date() - timedelta(days=14)
+
 def hhmmss(s):
     s = int(s or 0); return f"{s//3600:02d}:{s%3600//60:02d}:{s%60:02d}"
 
@@ -103,6 +142,8 @@ for slug, s in comp.items():
             "guid": str(uuid.uuid5(NS, it["asset"])),
             "src": it.get("source", "structure"),
         })
+    for it, when in zip(items, schedule(len(items), START)):
+        it["pub"] = when
     hours = round(sum(i["secs"] for i in items) / 3600)
     json.dump({"slug": slug, "name": s["name"], "count": len(items),
                "hours": hours, "links": LINKS.get(slug, {}), "items": items},
@@ -122,7 +163,7 @@ kz = json.load(open(os.path.expanduser("~/podcasts/KuzariPod/episodes.json")))
 MA = {"m1": "מאמר ראשון", "m2": "מאמר שני", "m3": "מאמר שלישי",
       "m4": "מאמר רביעי", "m5": "מאמר חמישי", "bonus": "שיעורים נוספים"}
 now = datetime.now(timezone.utc)
-live = [e for e in kz if datetime.fromisoformat(e["publish_at"]) <= now]
+live = kz          # באתר מציגים את כולם; הפיד של הכוזרי מסנן בעצמו
 kz_items, seq = [], 0
 for e in live:
     seq += 1
@@ -133,10 +174,10 @@ for e in live:
         "url": e["url"], "size": e["size"], "dur": e["duration"],
         "secs": (int(e["duration"][:2]) * 3600 + int(e["duration"][3:5]) * 60
                  + int(e["duration"][6:8])),
-        "guid": e["guid"], "src": "kuzari",
+        "guid": e["guid"], "src": "kuzari", "pub": e["publish_at"],
     })
 kz_hours = round(sum(i["secs"] for i in kz_items) / 3600)
-waiting = len(kz) - len(live)
+waiting = sum(1 for e in kz if datetime.fromisoformat(e["publish_at"]) > now)
 json.dump({"slug": "kuzari", "name": "ספר הכוזרי לרבינו יהודה הלוי",
            "count": len(kz_items), "hours": kz_hours,
            "external": True, "links": LINKS["kuzari"],
