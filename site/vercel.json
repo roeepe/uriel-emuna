@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/s/:slug", "destination": "/series.html" },
+    { "source": "/feed/:slug.xml", "destination": "/api/feed?s=:slug" }
+  ]
+}

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>סדרה — שיעורי אמונה עם הרב בן ציון אוריאל</title>
+<meta name="theme-color" content="#F7F3EA">
+<link rel="icon" href="/cover/kuzari.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<a class="skip" href="#list">דילוג לרשימת השיעורים</a>
+
+<div class="wrap" style="padding-top:16px">
+  <a class="back" href="/">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    כל הסדרות
+  </a>
+</div>
+
+<header class="wrap s-head">
+  <img class="cover" id="cover" src="" alt="" width="128" height="128">
+  <div style="flex:1 1 340px; min-width:0">
+    <h1 id="name">…</h1>
+    <p class="card-meta" id="meta"></p>
+    <div class="actions" id="actions"></div>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="wrap">
+    <label class="search">
+      <span class="skip">חיפוש בסדרה</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="q" placeholder="חיפוש בתוך הסדרה" autocomplete="off">
+    </label>
+    <div class="chips" id="chips" role="group" aria-label="סינון לפי חלק"></div>
+  </div>
+</div>
+
+<main class="wrap" id="list">
+  <p class="card-meta" id="count" role="status" aria-live="polite"></p>
+  <div id="out"></div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>השיעורים נאמרו בישיבת בית אל. ההקלטות באדיבות אתר ישיבה.</p>
+  </div>
+</footer>
+
+<div class="player" id="player" role="region" aria-label="נגן">
+  <div class="player-inner">
+    <div class="player-text">
+      <p class="player-title" id="p-title"></p>
+      <audio id="audio" controls preload="none"></audio>
+    </div>
+    <button class="close" id="p-close" aria-label="סגירת הנגן">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+const ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.53.85l10-6.5a1 1 0 0 0 0-1.7l-10-6.5A1 1 0 0 0 8 5.5Z"/></svg>';
+const ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="7" y="5" width="4" height="14" rx="1"/><rect x="13" y="5" width="4" height="14" rx="1"/></svg>';
+const fmt = new Intl.NumberFormat('he-IL');
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const slug = (location.pathname.match(/\/s\/([a-z-]+)/) || [])[1] || 'kuzari';
+
+let DATA = null, filter = 'all', query = '', shown = 150;
+
+fetch(`/data/${slug}.json`).then(r => r.json()).then(d => {
+  DATA = d;
+  document.title = `${d.name} — שיעורי אמונה`;
+  document.getElementById('name').textContent = d.name;
+  document.getElementById('cover').src = `/cover/${slug}.jpg`;
+  document.getElementById('meta').textContent =
+    `${fmt.format(d.count)} שיעורים · ${fmt.format(d.hours)} שעות לימוד`;
+
+  const L = d.links || {};
+  const rss = L.rss || `${location.origin}/feed/${slug}.xml`;
+  document.getElementById('actions').innerHTML = [
+    `<a class="btn btn-primary" href="${rss}">
+       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5" fill="currentColor" stroke="none"/></svg>
+       כתובת הפודקאסט (RSS)</a>`,
+    L.spotify
+      ? `<a class="btn" href="${L.spotify}" rel="noopener">בספוטיפיי</a>`
+      : `<span class="btn" aria-disabled="true" title="יתווסף כשנחבר את הסדרה לספוטיפיי">בספוטיפיי — בקרוב</span>`,
+    L.youtube
+      ? `<a class="btn" href="${L.youtube}" rel="noopener">ביוטיוב</a>`
+      : `<span class="btn" aria-disabled="true" title="יתווסף כשנחבר את הסדרה ליוטיוב">ביוטיוב — בקרוב</span>`,
+    L.page ? `<a class="btn" href="${L.page}" rel="noopener">לעמוד הסדרה</a>` : '',
+  ].join('');
+
+  const tops = [];
+  d.items.forEach(i => { const t = (i.sec || [])[0]; if (t && !tops.includes(t)) tops.push(t); });
+  if (tops.length > 1) {
+    document.getElementById('chips').innerHTML =
+      [['all', 'הכל'], ...tops.map(t => [t, t])]
+        .map(([k, l]) => `<button class="chip" type="button" data-k="${esc(k)}" aria-pressed="${k === 'all'}">${esc(l)}</button>`).join('');
+  }
+  render();
+});
+
+document.getElementById('chips').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  filter = b.dataset.k; shown = 150;
+  document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', c.dataset.k === filter));
+  render();
+});
+document.getElementById('q').addEventListener('input', e => {
+  clearTimeout(window._t);
+  window._t = setTimeout(() => { query = e.target.value.trim(); shown = 150; render(); }, 180);
+});
+
+const strip = h => h.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+
+function match(i) {
+  if (filter !== 'all' && (i.sec || [])[0] !== filter) return false;
+  if (!query) return true;
+  const hay = (i.title + ' ' + strip(i.desc) + ' #' + i.n).toLowerCase();
+  return query.toLowerCase().split(/\s+/).every(w => hay.includes(w));
+}
+
+function render() {
+  const rows = DATA.items.filter(match);
+  document.getElementById('count').textContent =
+    (query || filter !== 'all')
+      ? `${fmt.format(rows.length)} שיעורים מתוך ${fmt.format(DATA.count)}`
+      : `${fmt.format(DATA.count)} שיעורים`;
+  const slice = rows.slice(0, shown);
+  let html = '', sec = null;
+  for (const i of slice) {
+    const s = (i.sec || []).join(' · ');
+    if (s !== sec) {
+      if (sec !== null) html += '</ol>';
+      sec = s;
+      html += `<h2 class="sec">${esc(s || 'שיעורים')}</h2><ol class="eps">`;
+    }
+    html += `<li class="ep" id="ep${i.n}" data-n="${i.n}">
+      <button class="play" type="button" data-n="${i.n}" aria-label="נגן: ${esc(i.title)}">${ICON_PLAY}</button>
+      <div>
+        <h3 class="ep-title">${esc(i.title)}</h3>
+        <p class="ep-meta"><span>${i.dur.replace(/^00:/, '')}</span></p>
+        <div class="ep-desc">${i.desc}</div>
+      </div>
+    </li>`;
+  }
+  if (sec !== null) html += '</ol>';
+  if (!slice.length) html = '<p class="empty">לא נמצא שיעור מתאים.</p>';
+  else if (rows.length > shown)
+    html += `<button class="more" id="more">הצגת ${fmt.format(Math.min(150, rows.length - shown))} שיעורים נוספים (מתוך ${fmt.format(rows.length - shown)})</button>`;
+  document.getElementById('out').innerHTML = html;
+  const m = document.getElementById('more');
+  if (m) m.addEventListener('click', () => { shown += 150; render(); });
+  paint();
+  if (location.hash.startsWith('#ep')) {
+    const el = document.getElementById(location.hash.slice(1));
+    if (el) { el.scrollIntoView({ block: 'center' }); location.hash = ''; }
+  }
+}
+
+const audio = document.getElementById('audio');
+const player = document.getElementById('player');
+let cur = null;
+
+document.getElementById('out').addEventListener('click', e => {
+  const b = e.target.closest('.play'); if (!b) return;
+  const n = Number(b.dataset.n);
+  if (cur === n && !audio.paused) { audio.pause(); return; }
+  if (cur === n) { audio.play(); return; }
+  const i = DATA.items.find(x => x.n === n);
+  cur = n; audio.src = i.url;
+  document.getElementById('p-title').textContent = i.title;
+  player.classList.add('open');
+  document.documentElement.style.setProperty('--player-h', player.offsetHeight + 'px');
+  audio.play().catch(() => {});
+  paint();
+});
+['play', 'pause', 'ended'].forEach(ev => audio.addEventListener(ev, paint));
+function paint() {
+  document.querySelectorAll('.ep').forEach(li => {
+    const on = Number(li.dataset.n) === cur;
+    li.classList.toggle('is-playing', on);
+    const b = li.querySelector('.play');
+    if (b) b.innerHTML = (on && !audio.paused) ? ICON_PAUSE : ICON_PLAY;
+  });
+}
+document.getElementById('p-close').addEventListener('click', () => {
+  audio.pause(); player.classList.remove('open');
+  document.documentElement.style.setProperty('--player-h', '0px');
+  cur = null; paint();
+});
+</script>
+</body>
+</html>

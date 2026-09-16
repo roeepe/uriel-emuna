@@ -1,0 +1,6 @@
+work/
+docs/
+sample/
+clips/
+*.log
+data/tree.json

@@ -1,0 +1,53 @@
+{
+ "kuzari": {
+  "rss": "https://kuzari-pod.vercel.app/feed.xml",
+  "page": "https://kuzari-pod.vercel.app",
+  "spotify": "https://open.spotify.com/show/4Hrgs1T4J5sHL85Y4kQ5IB",
+  "youtube": "https://www.youtube.com/playlist?list=PLCCb7qAYb-GEA2UzF-DbvauEBUp7qGSsd"
+ },
+ "saadia": {
+  "rss": null,
+  "spotify": null,
+  "youtube": null
+ },
+ "chovot": {
+  "rss": null,
+  "spotify": null,
+  "youtube": null
+ },
+ "rambam": {
+  "rss": null,
+  "spotify": null,
+  "youtube": null
+ },
+ "ramban": {
+  "rss": null,
+  "spotify": null,
+  "youtube": null
+ },
+ "haran": {
+  "rss": null,
+  "spotify": null,
+  "youtube": null
+ },
+ "or-hashem": {
+  "rss": null,
+  "spotify": null,
+  "youtube": null
+ },
+ "ikarim": {
+  "rss": null,
+  "spotify": null,
+  "youtube": null
+ },
+ "maharal": {
+  "rss": null,
+  "spotify": null,
+  "youtube": null
+ },
+ "ramchal": {
+  "rss": null,
+  "spotify": null,
+  "youtube": null
+ }
+}

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>שיעורי אמונה — הרב בן ציון אוריאל</title>
+<meta name="description" content="עשר סדרות שיעורים בספרי מחשבה ואמונה מאת הרב בן ציון אוריאל — הכוזרי, חובות הלבבות, הרמב״ם, המהר״ל, הרמח״ל ועוד. להאזנה ישירה או כפודקאסט.">
+<meta property="og:title" content="שיעורי אמונה — הרב בן ציון אוריאל">
+<meta property="og:description" content="עשר סדרות בספרי מחשבה ואמונה. אלפי שיעורים להאזנה ישירה או כפודקאסט.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#F7F3EA">
+<link rel="icon" href="/cover/kuzari.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<a class="skip" href="#series">דילוג לרשימת הסדרות</a>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">בית מדרש להאזנה</p>
+    <h1>שיעורי אמונה<span> עם הרב בן ציון אוריאל</span></h1>
+    <p class="blurb">עשר סדרות בספרי המחשבה והאמונה — מרס״ג ועד הרמח״ל. כל סדרה
+      נלמדת לאורכה, ספר אחרי ספר, שער אחרי שער, ואפשר להאזין כאן או להירשם
+      אליה כפודקאסט ולקבל אותה לטלפון.</p>
+    <dl class="stats" id="stats"></dl>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="wrap">
+    <label class="search">
+      <span class="skip">חיפוש בכל השיעורים</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="q" placeholder="חיפוש שיעור בכל הסדרות — נושא, ספר, פרק" autocomplete="off">
+    </label>
+  </div>
+</div>
+
+<main class="wrap">
+  <section id="results" hidden aria-live="polite">
+    <h2 class="section-h">תוצאות החיפוש <span id="rcount"></span></h2>
+    <ol class="hits" id="hits"></ol>
+  </section>
+
+  <section id="series">
+    <h2 class="section-h">הסדרות</h2>
+    <ul class="grid" id="grid"></ul>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>השיעורים נאמרו בישיבת בית אל. ההקלטות באדיבות אתר ישיבה.</p>
+    <p class="muted">כל סדרה זמינה גם כפודקאסט — הקישור נמצא בעמוד הסדרה.</p>
+  </div>
+</footer>
+
+<script>
+const fmt = new Intl.NumberFormat('he-IL');
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let INDEX = [], SEARCH = null, names = {};
+
+fetch('/data/index.json').then(r => r.json()).then(ix => {
+  INDEX = ix;
+  ix.forEach(s => names[s.slug] = s.name);
+  const eps = ix.reduce((a, b) => a + b.count, 0);
+  const hrs = ix.reduce((a, b) => a + b.hours, 0);
+  document.getElementById('stats').innerHTML =
+    `<div><dt>סדרות</dt><dd>${ix.length}</dd></div>` +
+    `<div><dt>שיעורים</dt><dd>${fmt.format(eps)}</dd></div>` +
+    `<div><dt>שעות לימוד</dt><dd>${fmt.format(hrs)}</dd></div>`;
+  document.getElementById('grid').innerHTML = ix.map(card).join('');
+});
+
+function card(s) {
+  const parts = (s.parts || []).slice(0, 4)
+    .map(p => `<li>${esc(p)}</li>`).join('');
+  return `<li class="card">
+    <a class="card-link" href="/s/${s.slug}">
+      <img class="cover" src="/cover/${s.slug}.jpg" alt="" width="96" height="96" loading="lazy">
+      <div class="card-body">
+        <h3>${esc(s.name)}</h3>
+        <p class="card-meta">${fmt.format(s.count)} שיעורים · ${fmt.format(s.hours)} שעות</p>
+        ${parts ? `<ul class="parts">${parts}</ul>` : ''}
+      </div>
+    </a>
+  </li>`;
+}
+
+const qEl = document.getElementById('q');
+qEl.addEventListener('input', () => {
+  clearTimeout(window._t);
+  window._t = setTimeout(run, 180);
+});
+
+async function run() {
+  const q = qEl.value.trim();
+  const res = document.getElementById('results');
+  const ser = document.getElementById('series');
+  if (q.length < 2) { res.hidden = true; ser.hidden = false; return; }
+  if (!SEARCH) SEARCH = await (await fetch('/data/search.json')).json();
+  const terms = q.toLowerCase().split(/\s+/);
+  const hits = SEARCH.filter(([slug, n, t]) => {
+    const hay = (t + ' ' + (names[slug] || '')).toLowerCase();
+    return terms.every(w => hay.includes(w));
+  });
+  document.getElementById('rcount').textContent = `(${fmt.format(hits.length)})`;
+  document.getElementById('hits').innerHTML = hits.slice(0, 120).map(([slug, n, t]) =>
+    `<li><a href="/s/${slug}#ep${n}">
+       <span class="hit-t">${esc(t)}</span>
+       <span class="hit-s">${esc(names[slug] || slug)}</span>
+     </a></li>`).join('') ||
+    '<li class="empty">לא נמצא שיעור מתאים. אפשר לנסות מילה אחרת, שם של ספר או מספר פרק.</li>';
+  if (hits.length > 120)
+    document.getElementById('hits').insertAdjacentHTML('beforeend',
+      `<li class="empty">מוצגות 120 התוצאות הראשונות מתוך ${fmt.format(hits.length)}. אפשר לצמצם בעזרת מילה נוספת.</li>`);
+  res.hidden = false; ser.hidden = true;
+}
+</script>
+</body>
+</html>
