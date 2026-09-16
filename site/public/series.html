@@ -91,7 +91,7 @@ fetch(`/data/${slug}.json`).then(r => r.json()).then(d => {
   ].join('');
 
   const tops = [];
-  d.items.forEach(i => { const t = (i.sec || [])[0]; if (t && !tops.includes(t)) tops.push(t); });
+  d.items.forEach(i => { const t = i.part || (i.sec || [])[0]; if (t && !tops.includes(t)) tops.push(t); });
   if (tops.length > 1) {
     document.getElementById('chips').innerHTML =
       [['all', 'הכל'], ...tops.map(t => [t, t])]
@@ -114,7 +114,7 @@ document.getElementById('q').addEventListener('input', e => {
 const strip = h => h.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
 
 function match(i) {
-  if (filter !== 'all' && (i.sec || [])[0] !== filter) return false;
+  if (filter !== 'all' && (i.part || (i.sec || [])[0]) !== filter) return false;
   if (!query) return true;
   const hay = (i.title + ' ' + strip(i.desc) + ' #' + i.n).toLowerCase();
   return query.toLowerCase().split(/\s+/).every(w => hay.includes(w));

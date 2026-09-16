@@ -146,7 +146,7 @@ def main():
                 dst = os.path.join(d, "src-" + r["asset"])
                 for attempt in range(3):
                     cp = subprocess.run(
-                        [RCLONE, f"--drive-root-folder-id={ROOT_ID}", "copyto",
+                        [RCLONE, f"--drive-root-folder-id={r.get('root', ROOT_ID)}", "copyto",
                          "gdrive:" + r["path"], dst,
                          "--retries", "3", "--low-level-retries", "20"],
                         capture_output=True, text=True)

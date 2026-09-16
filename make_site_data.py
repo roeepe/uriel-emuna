@@ -8,16 +8,44 @@ LINKS = json.load(open(f"{D}/links.json"))
 def hhmmss(s):
     s = int(s or 0); return f"{s//3600:02d}:{s%3600//60:02d}:{s%60:02d}"
 
+def parts_of(items):
+    """לאיזו חטיבה שייך כל שיעור — הרמה שבאמת מחלקת את החומר.
+
+    🚨 ברמב"ם, «מורה הנבוכים» הוא תיקייה אחת שמכילה *שני סבבי לימוד שלמים*
+       של אותו ספר (תש"פ-תשפ"א ותשפ"ב-תשפ"ג). כשמציגים אותה כחטיבה אחת,
+       הספר נלמד פעמיים ברצף בלי שום סימן שמדובר בשתי סדרות נפרדות — וזה מה
+       שהרב בן ציון תפס. לכן חטיבה גדולה שיש בה כמה תת-תיקיות נפתחת לרמה
+       הבאה, ומי שמסתכל רואה שני סבבים ולא רצף אחד.
+    """
+    from collections import Counter
+    top = Counter()
+    kids = {}
+    for it in items:
+        sec = [x for x in it["section"] if x]
+        if not sec: continue
+        top[sec[0]] += 1
+        kids.setdefault(sec[0], set()).add(sec[1] if len(sec) > 1 else None)
+    out = {}
+    for name, n in top.items():
+        ch = {k for k in kids[name] if k}
+        out[name] = (n >= 150 and len(ch) >= 2)
+    return out
+
 comp = json.load(open(f"{D}/episodes_composed.json"))
 index = []
 for slug, s in comp.items():
     repo = f"roeepe/uriel-audio-{slug}"
+    split = parts_of([x for x in s["items"] if x.get("ready")])
     items, secs = [], []
     for it in s["items"]:
         if not it.get("ready"):
             continue
         tag = it.get("tag", "audio")
         sec = [x for x in it["section"] if x]
+        part = ""
+        if sec:
+            part = (f"{sec[0]} · {sec[1]}" if split.get(sec[0]) and len(sec) > 1
+                    else sec[0])
         if sec and (not secs or secs[-1] != sec):
             secs.append(sec)
         items.append({
@@ -25,6 +53,7 @@ for slug, s in comp.items():
             "title": it["title"],
             "desc": it["description_html"],
             "sec": sec,
+            "part": part,
             "url": f"https://github.com/{repo}/releases/download/{tag}/{it['asset']}",
             "size": it["size"],
             "dur": hhmmss(it["duration"]),
@@ -37,8 +66,8 @@ for slug, s in comp.items():
                "hours": hours, "links": LINKS.get(slug, {}), "items": items},
               open(f"{OUT}/{slug}.json", "w"), ensure_ascii=False)
     tops = []
-    for sec in secs:
-        if sec[0] not in tops: tops.append(sec[0])
+    for i in items:
+        if i["part"] and i["part"] not in tops: tops.append(i["part"])
     index.append({"slug": slug, "name": s["name"], "count": len(items),
                   "hours": hours, "parts": tops[:8], "links": LINKS.get(slug, {})})
 

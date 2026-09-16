@@ -32,13 +32,37 @@ DOCS = {
 def words(s):
     return [w for w in re.split(r"[\s,;]+", s or "") if len(w) > 2 and re.search(r"[א-ת]", w)]
 
+# מילים שפותחות ציון מקום בספר. אחריהן בא סימן — אות בודדת, גימטריה או מספר.
+LOC_START = (r"(פרק|פרקים|סעיף|סעיפים|שער|מאמר|דרוש|דרושים|כלל|כללים|חלק|"
+             r"לאו|לאוין|עשה|מצוה|מצוות|הלכה|הלכות|הקדמה|פתיחה|סימן|מעלה|מעלות)")
+
+def _ref_tail(s):
+    t = s.split()
+    return bool(t) and bool(re.fullmatch(r"[א-ת]{1,3}[\"']?\d*", t[-1])
+                            or re.fullmatch(r"[\d\-–]+", t[-1]))
+
 def is_topic(s):
-    """האם זה נושא שנכתב, או רק סימון מיקום כמו «ב,א,א2-ב1»?"""
-    if not s: return False
-    if len(words(s)) >= 3: return True
-    # «פרק ט2, חתימת הפרק» — מיקום ואז פסיק ואז נושא
-    tail = s.split(",", 1)[-1].strip() if "," in s else ""
-    return len(words(tail)) >= 3
+    """האם זה נושא שהרב כתב, או רק ציון מקום בספר?
+
+    🚨 הגרסה הראשונה דרשה שלוש מילים עבריות, ולכן «האגרת לתלמיד», «מבוא
+       ללימוד» ו«סיכום הדרוש» הודחו ל'מיקום' — והכותרת שלהם נבנתה משם
+       התיקייה עם השם האמיתי נגרר אחריו. 97 שיעורים נפגעו ככה. הרב בן ציון
+       הוא שתפס את זה ב«קלקל קצת את הכותרות».
+    """
+    if not s:
+        return False
+    # «פרק ט2, חתימת הפרק ומקומו» — מיקום, פסיק, ואז הנושא האמיתי
+    if "," in s:
+        tail = s.split(",", 1)[1].strip()
+        if len(words(tail)) >= 2:
+            return True
+    if len(words(s)) >= 3:
+        return True
+    if re.search(r"\d", s):                       # «הקדמה1», «ב,כט21-12»
+        return False
+    if re.match(rf"^{LOC_START}\b", s) and _ref_tail(s):   # «פרק כד», «חלק א»
+        return False
+    return len(words(s)) >= 2                     # «מבוא ללימוד», «האגרת לתלמיד»
 
 def location_of(it):
     """המיקום בספר כפי שהוא כתוב בשם ההקלטה, בלי שם הסדרה החוזר."""

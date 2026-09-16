@@ -55,15 +55,20 @@ def hebrew_words(s):
     return [w for w in re.split(r"[\s,;]+", s) if len(w) > 2 and re.search(r"[א-ת]", w)]
 
 
-def load_tree():
+MAIN_ROOT = "1CRxSrjs0ec_fTHfhlyNvUZZgVexI0Tgr"
+
+def load_rows():
+    """כל ההקלטות, מהמניפסט.
+
+    🚨 לא מ-tree.json: שיעורי הרמח"ל הנוספים יושבים בתיקיית דרייב אחרת לגמרי,
+       ולכן הם פשוט לא היו שם. במניפסט יש לכל שורה גם `root`, ולפיו יודעים אם
+       הנתיב מתחיל בשם הסדרה (התיקייה הראשית) או ישר בחלק שלה (התיקייה השנייה).
+    """
     rows = []
-    for x in json.load(open(os.path.join(D, "tree.json"))):
-        if x["IsDir"] or not x["Path"].lower().endswith(AUD):
-            continue
-        m = re.match(r"^(\d+)", x["Path"].split("/")[0])
-        if not m:
-            continue
-        rows.append((int(m.group(1)), x["Path"], x.get("Size", 0)))
+    for r in json.load(open(os.path.join(D, "manifest.json"))):
+        parts = r["path"].split("/")
+        folders = parts[1:-1] if r.get("root", MAIN_ROOT) == MAIN_ROOT else parts[:-1]
+        rows.append((r["series"], r["path"], folders, parts[-1], r))
     return rows
 
 
@@ -79,11 +84,9 @@ def main():
     out = {}
     for snum, info in series.items():
         slug = info["slug"]
-        rows = [r for r in load_tree() if r[0] == int(snum)]
+        rows = [r for r in load_rows() if r[0] == int(snum)]
         items = []
-        for _, path, size in rows:
-            parts = path.split("/")
-            folders, fname = parts[1:-1], parts[-1]
+        for _, path, folders, fname, _row in rows:
             stem = re.sub(r"\.(mp3|m4a|wav|3gp)$", "", fname, flags=re.I)
             pre, num, rest = parse_stem(stem)
             items.append({
