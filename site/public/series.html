@@ -26,6 +26,7 @@
   <div style="flex:1 1 340px; min-width:0">
     <h1 id="name">…</h1>
     <p class="card-meta" id="meta"></p>
+    <p class="card-meta" id="note" hidden></p>
     <div class="actions" id="actions"></div>
   </div>
 </header>
@@ -74,6 +75,10 @@ fetch(`/data/${slug}.json`).then(r => r.json()).then(d => {
   document.getElementById('cover').src = `/cover/${slug}.jpg`;
   document.getElementById('meta').textContent =
     `${fmt.format(d.count)} שיעורים · ${fmt.format(d.hours)} שעות לימוד`;
+  if (d.note) {
+    const nl = document.getElementById('note');
+    nl.textContent = d.note; nl.hidden = false;
+  }
 
   const L = d.links || {};
   const rss = L.rss || `${location.origin}/feed/${slug}.xml`;

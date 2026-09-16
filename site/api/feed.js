@@ -19,6 +19,14 @@ module.exports = (req, res) => {
     return;
   }
   const d = JSON.parse(fs.readFileSync(file, 'utf8'));
+
+  // 🚨 סדרה שכבר מתפרסמת מכתובת משלה לא מקבלת כאן פיד שני. פיד כפול על אותם
+  //    פרקים היה נרשם בספוטיפיי כתוכנית נפרדת ומפצל את המאזינים בין שתיים.
+  if (d.external && d.links && d.links.rss) {
+    res.setHeader('Location', d.links.rss);
+    res.status(301).end();
+    return;
+  }
   const host = req.headers['x-forwarded-host'] || req.headers.host;
   const base = `https://${host}`;
   const cover = `${base}/cover/${slug}.jpg`;

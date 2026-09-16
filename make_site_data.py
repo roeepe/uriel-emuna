@@ -62,13 +62,18 @@ for _slug, _s in comp.items():
         for i in picked:
             i = dict(i)
             i["section"] = [x for x in i["section"] if x][drop:]
+        # 🚨 שם המאגר נגזר מהסדרה *שממנה פוצלנו*, לא מהפודקאסט החדש. קבצי
+        #    מורה הנבוכים יושבים ב-uriel-audio-rambam; בנייה לפי השם החדש
+        #    יצרה כתובות ל-uriel-audio-moreh-rishon שלא קיים, וכל 782
+        #    השיעורים החזירו 404. הרב בן ציון הוא שתפס את זה.
         expanded[out_slug] = {"name": out_name, "series": _s["series"],
+                              "repo": _slug,
                               "items": [{**i, "section": [x for x in i["section"] if x][drop:]}
                                         for i in picked]}
 comp = expanded
 index = []
 for slug, s in comp.items():
-    repo = f"roeepe/uriel-audio-{slug}"
+    repo = f"roeepe/uriel-audio-{s.get('repo', slug)}"
     split = parts_of([x for x in s["items"] if x.get("ready")])
     items, secs = [], []
     seq = 0
@@ -108,15 +113,43 @@ for slug, s in comp.items():
     index.append({"slug": slug, "name": s["name"], "count": len(items),
                   "hours": hours, "parts": tops[:8], "links": LINKS.get(slug, {})})
 
-# הכוזרי הוא סדרה עשירית — הוא כבר חי בכתובת משלו, ואנחנו רק מצביעים עליה
+# הכוזרי חי בכתובת משלו ומחובר לספוטיפיי, ולכן הפיד שלו לא מוגש מכאן.
+# 🚨 אבל *עמוד* חייב להיות לו: בלעדיו הכרטיס בעמוד הבית מפנה ל-/s/kuzari,
+#    הדף מבקש kuzari.json, מקבל 404 ונתקע על «…». זה מה שהרב בן ציון ראה
+#    כש«ספר הכוזרי לא נפתח».
+from datetime import datetime, timezone
 kz = json.load(open(os.path.expanduser("~/podcasts/KuzariPod/episodes.json")))
+MA = {"m1": "מאמר ראשון", "m2": "מאמר שני", "m3": "מאמר שלישי",
+      "m4": "מאמר רביעי", "m5": "מאמר חמישי", "bonus": "שיעורים נוספים"}
+now = datetime.now(timezone.utc)
+live = [e for e in kz if datetime.fromisoformat(e["publish_at"]) <= now]
+kz_items, seq = [], 0
+for e in live:
+    seq += 1
+    part = "הקדמה" if e["n"] <= 8 else MA.get(e["maamar"], "")
+    kz_items.append({
+        "n": seq, "title": e["title"], "desc": e["description_html"],
+        "sec": [part] if part else [], "part": part,
+        "url": e["url"], "size": e["size"], "dur": e["duration"],
+        "secs": (int(e["duration"][:2]) * 3600 + int(e["duration"][3:5]) * 60
+                 + int(e["duration"][6:8])),
+        "guid": e["guid"], "src": "kuzari",
+    })
+kz_hours = round(sum(i["secs"] for i in kz_items) / 3600)
+waiting = len(kz) - len(live)
+json.dump({"slug": "kuzari", "name": "ספר הכוזרי לרבינו יהודה הלוי",
+           "count": len(kz_items), "hours": kz_hours,
+           "external": True, "links": LINKS["kuzari"],
+           "note": (f"עוד {waiting} שיעורים מתוזמנים ויעלו בהדרגה, שיעור בכל יום א׳-ה׳."
+                    if waiting else ""),
+           "items": kz_items},
+          open(f"{OUT}/kuzari.json", "w"), ensure_ascii=False)
+
 index.insert(0, {"slug": "kuzari", "name": "ספר הכוזרי לרבינו יהודה הלוי",
-                 "count": len(kz), "hours": 0, "external": True,
-                 "parts": ["הקדמה", "מאמר ראשון", "מאמר שני", "מאמר שלישי",
-                           "מאמר רביעי", "מאמר חמישי"],
+                 "count": len(kz_items), "hours": kz_hours, "external": True,
+                 "parts": [p for p in ["הקדמה", *MA.values()]
+                           if any(i["part"] == p for i in kz_items)],
                  "links": LINKS["kuzari"]})
-index[0]["hours"] = round(sum(
-    int(e["duration"][:2]) * 3600 + int(e["duration"][3:5]) * 60 for e in kz) / 3600)
 
 json.dump(index, open(f"{OUT}/index.json", "w"), ensure_ascii=False)
 
@@ -129,8 +162,8 @@ for x in index:
     dd = json.load(open(f"{OUT}/{x['slug']}.json"))
     for it in dd["items"]:
         search.append([x["slug"], it["n"], it["title"]])
-for e in kz:
-    search.append(["kuzari", e["n"], e["title"]])
+for it in kz_items:
+    search.append(["kuzari", it["n"], it["title"]])
 json.dump(search, open(f"{OUT}/search.json", "w"), ensure_ascii=False)
 
 tot = sum(x["count"] for x in index)
