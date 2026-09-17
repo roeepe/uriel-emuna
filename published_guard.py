@@ -1,87 +1,104 @@
 #!/usr/bin/env python3
-"""שומר שפרק שכבר יצא בפיד לא יוחלף בפרק אחר.
+"""שומר שפרק שכבר יצא בפיד לא יוחלף בפרק אחר ולא ייעלם.
 
-🚨 הבעיה שזה נולד ממנה (17/9/2026): לוח הפרסום נגזר ממיקום הפרק ברשימה
-   (`schedule()` ב-make_site_data.py), ולכן הוספת שיעורים **באמצע** הסדרה
-   מזיזה את כל מי שאחריהם. ברמח"ל נוספו 279 שיעורים, וחמישה פרקים שכבר
-   יצאו בפיד הוחלפו בפרקים אחרים. באותו רגע זה לא הזיק — הפודקאסטים הוגשו
-   לספוטיפיי באותו יום ואיש עוד לא האזין. בפעם הבאה כן יזיק: פרק שנעלם
-   מהפיד נעלם גם מהאפליקציה של המאזין.
+🚨 שתי הדרכים שבהן פרק נעלם למאזין:
 
-מה זה עושה: מחזיק תמונת מצב של כל פרק שתאריך הפרסום שלו כבר עבר, ומשווה
-אליה אחרי כל בנייה. פרק חדש נרשם; פרק שהוחלף — נצעק עליו.
+1. **החלפה.** לוח הפרסום נגזר ממיקום הפרק ברשימה, ולכן הוספת שיעורים
+   באמצע סדרה מזיזה את כל מי שאחריהם. ברמח"ל נוספו 279 שיעורים וחמישה
+   פרקים שכבר יצאו הוחלפו באחרים (17/9/2026).
 
-    python3 published_guard.py            # בדיקה + רישום פרקים חדשים
-    python3 published_guard.py --check    # בדיקה בלבד, לא נוגע בתמונת המצב
+2. **היעלמות.** תאריך העוגן של הלוח חושב כ"היום פחות 14 יום", ולכן כל
+   בנייה הזיזה את הלוח קדימה והחזירה פודקאסט מ-9 פרקים ל-4 (17/9/2026).
 
-יציאה 0 = תקין · 1 = פרק שכבר פורסם הוחלף.
+פרק שנדחק מהפיד **אינו מתעדכן — הוא יורד** מהאפליקציה של מי שכבר מנוי.
+
+    python3 published_guard.py            # בדיקה + רישום
+    python3 published_guard.py --check    # בדיקה בלבד
+    python3 published_guard.py --accept "סיבה"   # אישור מכוון של ירידה
+
+יציאה 0 = תקין · 1 = פרק שכבר פורסם הוחלף או נעלם.
 """
 import json, os, sys
 from datetime import datetime, timezone
 
-D = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site/public/data")
+HERE = os.path.dirname(os.path.abspath(__file__))
+D = os.path.join(HERE, "data")
+OUT = os.path.join(HERE, "site/public/data")
 SNAP = os.path.join(D, "published.json")
 CHECK_ONLY = "--check" in sys.argv
+ACCEPT = sys.argv[sys.argv.index("--accept") + 1] if "--accept" in sys.argv else None
+
+
+def feeds():
+    """כל הפודקאסטים — כולל החיבורים שבתוך אוסף.
+
+    🚨 הגרסה הראשונה עברה רק על השורות העליונות ב-index.json, ולכן 14 מתוך
+       23 הפודקאסטים (ramchal-2 ואילך) לא נשמרו כלל.
+    """
+    for c in json.load(open(f"{OUT}/index.json")):
+        for s in (c.get("works") or [c]):
+            if not s.get("external"):
+                yield s["slug"]
 
 
 def main():
     now = datetime.now(timezone.utc)
     raw = json.load(open(SNAP)) if os.path.exists(SNAP) else {}
-    counts = raw.pop("_counts", {}) if isinstance(raw, dict) else {}
+    counts = raw.pop("_counts", {})
+    raw.pop("_accepted", None)
     snap = raw
-    index = json.load(open(f"{OUT}/index.json"))
 
     broken, shrunk, added = [], [], 0
-    for entry in index:
-        slug = entry["slug"]
-        if entry.get("external"):
-            continue
+    for slug in feeds():
         try:
             items = json.load(open(f"{OUT}/{slug}.json"))["items"]
         except FileNotFoundError:
             continue
 
         was = snap.get(slug, {})
-        now_out = dict(was)
+        history = dict(was)
+        live = 0
         for it in items:
             pub = it.get("pub")
             if not pub or datetime.fromisoformat(pub.replace("Z", "+00:00")) > now:
                 continue
+            live += 1
             asset = it["url"].rsplit("/", 1)[-1]
             prev = was.get(pub)
             if prev is None:
-                now_out[pub] = asset
+                history[pub] = asset
                 added += 1
             elif prev != asset:
                 broken.append((slug, pub[:10], prev, asset, it["title"]))
-        # 🚨 גם ספירה יורדת היא אובדן. 17/9/2026: תאריך העוגן של הלוח חושב
-        #    כ"היום פחות 14 יום", ולכן כל בנייה הזיזה את הלוח קדימה והחזירה
-        #    פודקאסט מ-9 פרקים ל-4. אף פרק לא "הוחלף" — הם פשוט נעלמו,
-        #    והבדיקה לפי תאריך לבדה לא ראתה את זה.
-        was_n = counts.get(slug, 0)
-        now_n = len(now_out)
-        if now_n < was_n:
-            shrunk.append((slug, was_n, now_n))
-        counts[slug] = max(now_n, was_n)
-        snap[slug] = now_out
+
+        # 🚨 נספרים הפרקים שחיים **עכשיו**, לא אורך ההיסטוריה. ההיסטוריה רק
+        #    גדלה, ולכן מדידה לפיה לא ראתה ירידה מ-9 פרקים ל-1.
+        if live < counts.get(slug, 0):
+            shrunk.append((slug, counts[slug], live))
+        counts[slug] = live
+        snap[slug] = history
 
     for slug, was_n, now_n in shrunk:
-        print(f'❌ {slug}: מספר הפרקים שיצאו ירד מ-{was_n} ל-{now_n} — פרקים נעלמו')
-
+        print(f"❌ {slug}: הפרקים שבפיד ירדו מ-{was_n} ל-{now_n} — פרקים נעלמו למאזינים")
     for slug, day, prev, cur, title in broken:
-        print(f'❌ {slug} · {day}: הפרק שיצא הוחלף')
-        print(f'     היה: {prev}')
-        print(f'     עכשיו: {cur}  ({title})')
+        print(f"❌ {slug} · {day}: הפרק שיצא הוחלף")
+        print(f"     היה: {prev}")
+        print(f"     עכשיו: {cur}  ({title})")
 
-    if not broken and not shrunk:
-        print(f'✅ אף פרק שפורסם לא הוחלף ולא נעלם'
-              + (f' · נרשמו {added} פרקים חדשים' if added else ''))
+    bad = bool(broken or shrunk)
+    if not bad:
+        print(f"✅ {len(counts)} פודקאסטים נבדקו · אף פרק לא הוחלף ולא נעלם"
+              + (f" · {added} פרקים חדשים" if added else ""))
+    elif ACCEPT:
+        print(f"\n⚠️  אושר במכוון: {ACCEPT}")
 
-    if not CHECK_ONLY:
-        json.dump({**snap, "_counts": counts}, open(SNAP, "w"), ensure_ascii=False, indent=1)
+    if not CHECK_ONLY and (not bad or ACCEPT):
+        out = {**snap, "_counts": counts}
+        if ACCEPT:
+            out["_accepted"] = {"at": now.isoformat(timespec="minutes"), "why": ACCEPT}
+        json.dump(out, open(SNAP, "w"), ensure_ascii=False, indent=1)
 
-    return 1 if (broken or shrunk) else 0
+    return 0 if (not bad or ACCEPT) else 1
 
 
 if __name__ == "__main__":

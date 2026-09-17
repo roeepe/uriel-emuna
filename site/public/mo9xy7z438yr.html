@@ -81,8 +81,8 @@ fetch('/data/mo9xy7z438yr.json?t=' + Date.now()).then(r => r.json()).then(d => {
     `עודכן ${when.toLocaleDateString('he-IL')} בשעה ${when.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})} · נמדד מ-${d.since}`;
 
   document.getElementById('big').innerHTML = [
-    ['הורדות אמיתיות', fmt.format(d.downloads), 'אחרי סינון סריקות'],
-    ['סוננו כסריקות', fmt.format(d.filtered), 'פלטפורמות, לא אנשים'],
+    ['הורדות אפשריות', fmt.format(d.downloads), 'רק פרקים שכבר יצאו'],
+    ['רעש מכונה שנמדד', fmt.format(d.noise + d.filtered), 'סוננו במלואם'],
     ['פרקים שכבר יצאו', fmt.format(d.published), `מתוך ${fmt.format(d.episodes)}`],
     ['פודקאסטים', fmt.format(d.series.length), 'חיבור לכל אחד'],
   ].map(([t, v, s]) => `<div><dt>${t}</dt><dd>${v}</dd><small>${s}</small></div>`).join('');
@@ -95,7 +95,12 @@ fetch('/data/mo9xy7z438yr.json?t=' + Date.now()).then(r => r.json()).then(d => {
      <br><br>
      <b>וגם מה שנשאר אינו «האזנות».</b> אפליקציית פודקאסט מורידה פרק מראש גם
      אם המאזין לא לחץ נגן. המספר כאן הוא <b>הורדות</b> — הגבול העליון של
-     ההאזנה, לא ההאזנה עצמה. נתוני האזנה מדויקים קיימים רק אצל ספוטיפיי.`;
+     ההאזנה, לא ההאזנה עצמה. נתוני האזנה מדויקים קיימים רק אצל ספוטיפיי.
+     <br><br>
+     <b>איך אנחנו יודעים שהסינון עובד.</b> ${fmt.format(d.noise)} הורדות נמדדו
+     על פרקים ש<b>מעולם לא יצאו באף פיד</b> — אי אפשר להגיע אליהם דרך אפליקציה,
+     ולכן הן בהכרח מכונה. זו מידת הרעש שנשארת גם אחרי סינון הסריקות, והיא
+     הסיבה שגם המספר שלמעלה צריך להיקרא בזהירות כל עוד הוא קטן.`;
 
   const max = Math.max(1, ...d.series.map(r => r.downloads));
   document.getElementById('rows').innerHTML = d.series.map(r => `

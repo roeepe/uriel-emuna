@@ -55,7 +55,16 @@ def schedule(n, start):
 #    הייתה מחזירה כל פודקאסט מ-9 פרקים ל-4, כלומר **מוחקת פרקים שכבר הגיעו
 #    למאזינים**. הבנייה כמעט ולא רצה, ולכן זה לא התפוצץ — עד שהוספנו
 #    רענון יומי. מכאן ואילך הלוח מתקדם עם הזמן, לא זז איתו.
-START = date.fromisoformat(json.load(open(f"{D}/schedule.json"))["start"])
+_sch = json.load(open(f"{D}/schedule.json"))
+START = date.fromisoformat(_sch["start"])
+# 🚨 הפרק הראשון יוצא לבדו, והשאר מחכים ל-START. פיד ריק לגמרי נדחה
+#    בספוטיפיי, ולכן חייב להיות פרק אחד באוויר — אבל רק אחד.
+FIRST = date.fromisoformat(_sch["first"])
+
+def schedule_series(n):
+    """פרק ראשון בתאריך הקבוע שלו, והשאר יום-יום מ-START."""
+    head = datetime(FIRST.year, FIRST.month, FIRST.day, 15, 0, tzinfo=IL).isoformat()
+    return [head] + (schedule(n - 1, START) if n > 1 else [])
 
 # סדרה שממתינה לסדרה אחרת. שני הסבבים במורה הנבוכים הם אותו ספר, ואין טעם
 # שיתפרסמו במקביל — הסבב השני מתחיל רק אחרי שהראשון הסתיים.
@@ -225,7 +234,7 @@ for slug, s in comp.items():
 for slug, d in built.items():
     if slug in DEFER:
         continue
-    for it, when in zip(d["items"], schedule(len(d["items"]), START)):
+    for it, when in zip(d["items"], schedule_series(len(d["items"]))):
         it["pub"] = when
 
 for slug, cfg in DEFER.items():
@@ -234,7 +243,7 @@ for slug, cfg in DEFER.items():
         continue
     base = built.get(cfg["after"])
     teaser = cfg["teaser"]
-    for it, when in zip(d["items"][:teaser], schedule(teaser, START)):
+    for it, when in zip(d["items"][:teaser], schedule_series(teaser)):
         it["pub"] = when
     # הסבב מתחיל ביום שאחרי הפרק האחרון של הסדרה שלפניו
     after_last = datetime.fromisoformat(max(i["pub"] for i in base["items"])).date()
@@ -367,13 +376,19 @@ for c in col_index:
             continue
         live = [i for i in d["items"]
                 if i.get("pub") and datetime.fromisoformat(i["pub"]) <= datetime.now(IL)]
+        # 🚨 נספרות רק הורדות של פרקים **שכבר יצאו בפיד**. פרק שלא יצא אינו
+        #    נגיש לאיש דרך אפליקציית פודקאסט, ולכן הורדה שלו היא בהכרח
+        #    מכונה. ב-17/9/2026: 260 מתוך 321 ההורדות ישבו על פרקים שמעולם
+        #    לא פורסמו — כלומר המספר "האמיתי" היה עדיין כמעט כולו רעש.
+        live_ids = {i["n"] for i in live}
         rows.append({
             "slug": w["slug"], "name": w["name"],
             "collection": c["name"] if c["kind"] == "collection" else None,
             "episodes": w["count"], "published": len(live),
-            "downloads": sum(i.get("dl", 0) for i in d["items"]),
+            "downloads": sum(i.get("dl", 0) for i in d["items"] if i["n"] in live_ids),
+            "noise": sum(i.get("dl", 0) for i in d["items"] if i["n"] not in live_ids),
             "top": sorted(({"n": i["n"], "title": i["title"], "dl": i.get("dl", 0)}
-                           for i in d["items"]), key=lambda x: -x["dl"])[:3],
+                           for i in live), key=lambda x: -x["dl"])[:3],
         })
 rows.sort(key=lambda r: -r["downloads"])
 json.dump({
@@ -384,6 +399,7 @@ json.dump({
     "filtered": sum(x["removed"] for x in _log),
     "sweeps": _log[-12:],
     "downloads": sum(r["downloads"] for r in rows),
+    "noise": sum(r["noise"] for r in rows),
     "episodes": sum(r["episodes"] for r in rows),
     "published": sum(r["published"] for r in rows),
     "series": rows,

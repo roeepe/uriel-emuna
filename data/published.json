@@ -112,15 +112,69 @@
   "2026-09-15T15:00:00+03:00": "ramchal-b85447e79c.mp3",
   "2026-09-16T15:00:00+03:00": "ramchal-b45bb2ee41.mp3"
  },
+ "rambam-2": {
+  "2026-09-03T15:00:00+03:00": "rambam-1931b963e2.mp3"
+ },
+ "ramban-2": {
+  "2026-09-03T15:00:00+03:00": "ramban-1ea25190f8.mp3"
+ },
+ "ramban-3": {
+  "2026-09-03T15:00:00+03:00": "ramban-7f40cf7ab0.mp3"
+ },
+ "ramban-4": {
+  "2026-09-03T15:00:00+03:00": "ramban-c7f434571d.mp3"
+ },
+ "ramban-5": {
+  "2026-09-03T15:00:00+03:00": "ramban-e2692a9238.mp3"
+ },
+ "ramban-6": {
+  "2026-09-03T15:00:00+03:00": "ramban-26a400ba6c.mp3"
+ },
+ "maharal-2": {
+  "2026-09-03T15:00:00+03:00": "maharal-a60f5756e5.mp3"
+ },
+ "maharal-3": {
+  "2026-09-03T15:00:00+03:00": "maharal-c3eec5b617.mp3"
+ },
+ "ramchal-2": {
+  "2026-09-03T15:00:00+03:00": "ramchal-138241161f.mp3"
+ },
+ "ramchal-3": {
+  "2026-09-03T15:00:00+03:00": "ramchal-a12c5c72a4.mp3"
+ },
+ "ramchal-4": {
+  "2026-09-03T15:00:00+03:00": "ramchal-90c5a47334.mp3"
+ },
+ "ramchal-5": {
+  "2026-09-03T15:00:00+03:00": "ramchal-33f0d6dcb5.mp3"
+ },
  "_counts": {
-  "saadia": 9,
-  "chovot": 9,
-  "rambam": 9,
-  "ramban": 9,
-  "haran": 9,
-  "or-hashem": 9,
-  "ikarim": 9,
-  "maharal": 9,
-  "ramchal": 9
+  "saadia": 1,
+  "chovot": 1,
+  "rambam": 1,
+  "ramban": 1,
+  "haran": 1,
+  "or-hashem": 1,
+  "ikarim": 1,
+  "maharal": 1,
+  "ramchal": 1,
+  "rambam-2": 1,
+  "moreh-rishon": 1,
+  "moreh-sheni": 1,
+  "ramban-2": 1,
+  "ramban-3": 1,
+  "ramban-4": 1,
+  "ramban-5": 1,
+  "ramban-6": 1,
+  "maharal-2": 1,
+  "maharal-3": 1,
+  "ramchal-2": 1,
+  "ramchal-3": 1,
+  "ramchal-4": 1,
+  "ramchal-5": 1
+ },
+ "_accepted": {
+  "at": "2026-09-17T11:16+00:00",
+  "why": "בקשת רועי 17/9/2026: כל פודקאסט חוזר לפרק אחד, והפרסום היומי מתחיל ביום שלישי 22/9 אחרי יום כיפור. הפודקאסטים בני יום, וההורדות שנמדדו הן מכונות ולא מאזינים."
  }
 }
