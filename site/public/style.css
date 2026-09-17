@@ -177,3 +177,28 @@ ol.eps{list-style:none; margin:0; padding:0; display:flex; flex-direction:column
   .stats dd{font-size:1.3rem}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+
+/* ---- דף הבית: הכותרת המזמינה (17/9/2026) ---- */
+/* המספרים ירדו מהכותרת לתחתית. 3,475 שיעורים הם עדות לעומק אחרי שהחלטת
+   להיכנס, לא סיבה להיכנס — בראש עומד ספר אחד שאפשר להתחיל בו היום. */
+.lede{margin:0 0 var(--s4); font-size:clamp(1.05rem,2.6vw,1.35rem);
+  font-weight:600; color:var(--ink)}
+.hook{margin:0 0 var(--s6); padding-inline-start:var(--s4);
+  border-inline-start:3px solid var(--accent); color:var(--ink-2)}
+.hook strong{color:var(--ink)}
+.blurb strong{color:var(--ink)}
+
+.how{display:grid; gap:var(--s4); margin:0; padding:0; list-style:none;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); counter-reset:how}
+.how li{counter-increment:how; padding:var(--s4); background:var(--surface);
+  border:1px solid var(--line); border-radius:var(--r-lg)}
+/* 🚨 המספר בזרימה ולא ממוקם אבסולוטית: ב-RTL הוא ישב בפינה הימנית-עליונה
+   בדיוק במקום שבו מתחילה הכותרת, ו«או פשוט מקשיבים» נקרא «אי פשוט». */
+.how li::before{content:counter(how); display:grid; place-items:center;
+  width:26px; height:26px; margin-block-end:var(--s3); border-radius:50%;
+  background:var(--accent-soft); color:var(--accent);
+  font-size:.8rem; font-weight:700}
+.how b{display:block; margin-block-end:var(--s1); font-size:1.02rem}
+.how span{color:var(--ink-2); font-size:.94rem}
+
+footer .stats{margin-block-end:var(--s4)}

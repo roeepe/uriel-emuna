@@ -11,6 +11,10 @@
     {
       "source": "/c/:slug",
       "destination": "/collection.html"
+    },
+    {
+      "source": "/press",
+      "destination": "/press.html"
     }
   ]
 }

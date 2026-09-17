@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 🚨 טיוטה לאישור הרב, לא עמוד של האתר. noindex כדי שלא ייקלט בגוגל
+     ולא יופיע כתוכן רשמי לפני שהוחלט אם לפרסם בכלל. -->
+<meta name="robots" content="noindex, nofollow">
+<title>טיוטת כתבה — לומדים אמונה</title>
+<meta name="theme-color" content="#F7F3EA">
+<link rel="icon" href="/cover/col-ramchal.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;500;600;700&family=Frank+Ruhl+Libre:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F7F3EA; --paper:#FFFDF8; --ink:#241F17; --ink-2:#5A5143; --ink-3:#877C69;
+    --line:#E2D8C4; --accent:#8A6D3B; --accent-soft:#EFE5D0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Noto Sans Hebrew",system-ui,sans-serif; line-height:1.75;
+    -webkit-text-size-adjust:100%}
+  .sheet{max-width:760px; margin:0 auto; background:var(--paper);
+    border-inline:1px solid var(--line); min-height:100vh}
+  .pad{padding:0 clamp(20px,5vw,56px)}
+
+  .flag{background:var(--accent); color:#FFFDF8; padding:10px clamp(20px,5vw,56px);
+    font-size:.86rem; font-weight:600; display:flex; gap:10px; flex-wrap:wrap;
+    align-items:center; justify-content:space-between}
+  .flag span{opacity:.85; font-weight:500}
+
+  .masthead{border-bottom:1px solid var(--line); padding:22px 0 16px; margin-bottom:28px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px}
+  .masthead b{font-family:"Frank Ruhl Libre",serif; font-size:1.05rem; letter-spacing:.02em}
+  .masthead em{font-style:normal; color:var(--ink-3); font-size:.82rem}
+
+  .kicker{color:var(--accent); font-weight:700; font-size:.84rem;
+    letter-spacing:.09em; margin:0 0 12px}
+  h1{font-family:"Frank Ruhl Libre",serif; font-weight:800; margin:0 0 14px;
+    font-size:clamp(1.85rem,5.2vw,2.75rem); line-height:1.22; letter-spacing:-.01em}
+  .standfirst{margin:0 0 22px; font-size:clamp(1.02rem,2.4vw,1.2rem);
+    color:var(--ink-2); font-weight:500; line-height:1.6}
+  .byline{display:flex; gap:10px; align-items:center; padding:14px 0;
+    border-block:1px solid var(--line); margin-bottom:28px;
+    color:var(--ink-3); font-size:.88rem}
+
+  figure{margin:0 0 28px}
+  figure img{width:100%; height:clamp(260px,42vw,380px); object-fit:cover;
+    object-position:center 22%; display:block; border-radius:10px}
+  figcaption{color:var(--ink-3); font-size:.82rem; margin-top:8px}
+
+  article p{margin:0 0 18px; font-size:1.06rem}
+  article p.first::first-letter{font-family:"Frank Ruhl Libre",serif; float:inline-start;
+    font-size:3.4rem; line-height:.82; font-weight:800; margin-inline-end:8px;
+    margin-block-start:4px; color:var(--accent)}
+  article strong{font-weight:700}
+  h2{font-family:"Frank Ruhl Libre",serif; font-size:1.35rem; margin:32px 0 12px}
+
+  .pull{margin:28px 0; padding:20px 24px; background:var(--accent-soft);
+    border-radius:12px; font-family:"Frank Ruhl Libre",serif;
+    font-size:1.2rem; font-weight:700; line-height:1.5}
+
+  .quoteslot{margin:28px 0; padding:20px 24px; border:2px dashed var(--accent);
+    border-radius:12px; background:#fff; color:var(--ink-2)}
+  .quoteslot b{display:block; color:var(--accent); font-size:.86rem;
+    letter-spacing:.06em; margin-bottom:6px}
+
+  .facts{margin:28px 0; border:1px solid var(--line); border-radius:12px; overflow:hidden}
+  .facts div{display:flex; justify-content:space-between; gap:16px;
+    padding:12px 18px; border-bottom:1px solid var(--line); font-size:.98rem}
+  .facts div:last-child{border-bottom:0}
+  .facts div:nth-child(odd){background:#FBF7EE}
+  .facts dt{margin:0; color:var(--ink-2)}
+  .facts dd{margin:0; font-weight:700; white-space:nowrap}
+
+  .cta{margin:32px 0 0; padding:24px; border-radius:14px; text-align:center;
+    background:var(--ink); color:#FFFDF8}
+  .cta p{margin:0 0 6px; font-size:.95rem; opacity:.85}
+  .cta a{display:inline-block; margin-top:6px; color:#FFFDF8; font-weight:700;
+    font-size:1.25rem; font-family:"Frank Ruhl Libre",serif; text-decoration:none;
+    border-bottom:2px solid rgba(255,253,248,.45); padding-bottom:2px}
+
+  .strip{display:flex; gap:10px; overflow:hidden; margin:28px 0 0}
+  .strip img{width:calc(20% - 8px); height:auto; border-radius:8px; border:1px solid var(--line)}
+
+  footer.note{margin-top:36px; padding:22px 0 44px; border-top:1px solid var(--line);
+    color:var(--ink-3); font-size:.86rem}
+  @media print{ .flag{-webkit-print-color-adjust:exact; print-color-adjust:exact} }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <div class="flag">
+    טיוטה לאישור — טרם פורסמה
+    <span>הצעה לשליחה לתקשורת · 17.9.2026</span>
+  </div>
+
+  <div class="pad">
+    <div class="masthead">
+      <b>לומדים אמונה</b>
+      <em>עם הרב בן ציון אוריאל</em>
+    </div>
+
+    <p class="kicker">תורה והאזנה</p>
+    <h1>שמונה מאות שנה של מחשבת ישראל — בדרך לעבודה</h1>
+    <p class="standfirst">בית מדרש שלם בספרי היסוד של האמונה נפתח להאזנה
+      חופשית: 3,475 שיעורים, מהרס״ג ועד הרמח״ל. כל ספר מתחילתו ועד סופו.</p>
+    <div class="byline">מאת מערכת «לומדים אמונה» · זמן קריאה 3 דקות</div>
+
+    <figure>
+      <img src="/press-photo.jpg" alt="הרב בן ציון אוריאל">
+      <figcaption>הרב בן ציון אוריאל. את ההקלטות ערך, ארגן ושמר בעצמו לאורך השנים.</figcaption>
+    </figure>
+
+    <article>
+      <p class="first">כמה אנשים סיימו אי פעם את «מורה הנבוכים»? לא למדו
+        בו — <strong>סיימו</strong> אותו, מההקדמה ועד החתימה?</p>
+
+      <p>השאלה הזאת אינה רטורית. ספרי היסוד של מחשבת ישראל נחשבים לנכסי צאן
+        ברזל, אבל בפועל רובם נלמדים בקטעים: פרק כאן, מובאה שם, ציטוט בשיעור.
+        הספר כיחידה שלמה — עם המהלך שלו, עם הקושיות שהוא בונה לאורך מאה עמודים
+        ופותר במאה הבאה — נשאר נחלת מעטים.</p>
+
+      <p>אתר חדש בשם <strong>«לומדים אמונה»</strong> מציע לשנות את זה, והוא
+        עושה זאת בדרך שלא הייתה אפשרית לפני עשור: באוזניים.</p>
+
+      <p>באתר יושבים <strong>3,475 שיעורים, 2,080 שעות לימוד</strong>, של הרב
+        בן ציון אוריאל. הם מקיפים עשרה מגדולי מחשבת ישראל לאורך שמונה מאות
+        שנה — מ«הנבחר באמונות ובדעות» לרס״ג במאה העשירית, דרך «חובות הלבבות»,
+        «הכוזרי», כתבי הרמב״ם והרמב״ן, «אור ה'» לר' חסדאי קרשקש ו«ספר
+        העיקרים», ועד המהר״ל מפראג והרמח״ל.</p>
+
+      <h2>החידוש אינו בכמות אלא בשיטה</h2>
+
+      <p>כל ספר נלמד מתחילתו ועד סופו, ברצף, כפי שנלמד בבית המדרש. «מורה
+        הנבוכים» מופיע כאן פעמיים — שני סבבי לימוד שלמים ונפרדים, כל אחד מהם
+        יותר משלוש מאות שיעורים.</p>
+
+      <p>את ההקלטות ערך, ארגן ושמר הרב אוריאל בעצמו לאורך השנים, שיעור אחר
+        שיעור.</p>
+
+      <div class="quoteslot">
+        <b>כאן ייכנס ציטוט של הרב אוריאל</b>
+        על מה שחסר בלימוד מקוטע, או על מה שהתגלה לו כשלמד את הספרים ברצף.
+        <em>(לא כתבנו לו מילים — הציטוט צריך להיות שלו.)</em>
+      </div>
+
+      <div class="pull">אורך השיעור הממוצע הוא 36 דקות — בערך נסיעה לעבודה,
+        או ריצת בוקר.</div>
+
+      <p>הצד המעשי פשוט: כל חיבור הוא פודקאסט בפני עצמו, ואפשר להירשם רק למה
+        שרוצים ללמוד — מי שמבקש את «מסילת ישרים» אינו צריך לעבור קודם דרך
+        קל״ח פתחי החכמה. השיעורים מתפרסמים אחד ביום, בימים ראשון עד חמישי,
+        כך שהלימוד מתקדם בקצב של בית מדרש ולא נשפך בבת אחת.</p>
+
+      <h2>ומאיפה מתחילים?</h2>
+
+      <p>לא חייבים בספר הגדול. «ספר הויכוח» של הרמב״ן, תיעוד הוויכוח המפורסם
+        בברצלונה, נגמר בחמישה־עשר שיעורים. «דרשת קהלת» בשישה־עשר.</p>
+
+      <dl class="facts">
+        <div><dt>חיבורים</dt><dd>24</dd></div>
+        <div><dt>שיעורים</dt><dd>3,475</dd></div>
+        <div><dt>שעות לימוד</dt><dd>2,080</dd></div>
+        <div><dt>טווח הזמן</dt><dd>המאה ה־10 עד המאה ה־18</dd></div>
+        <div><dt>עלות</dt><dd>ללא תשלום וללא הרשמה</dd></div>
+      </dl>
+
+      <div class="strip">
+        <img src="/cover/saadia.jpg" alt=""><img src="/cover/chovot.jpg" alt="">
+        <img src="/cover/kuzari.jpg" alt=""><img src="/cover/moreh-rishon.jpg" alt="">
+        <img src="/cover/ramchal-4.jpg" alt="">
+      </div>
+
+      <div class="cta">
+        <p>ההאזנה חופשית, באתר ובספוטיפיי</p>
+        <a href="https://uriel-emuna.vercel.app">uriel-emuna.vercel.app</a>
+      </div>
+    </article>
+
+    <footer class="note">
+      <strong>הערה לרב:</strong> זו טיוטה בלבד, ולא נשלחה לשום גוף תקשורת.
+      היא מוצגת כאן כדי שתוכל לראות איך זה ייראה ולהחליט אם בכלל לנסות
+      לפרסם. כל מילה ניתנת לשינוי, והציטוט במסגרת המקווקוות ממתין לך.
+    </footer>
+  </div>
+</div>
+</body>
+</html>
