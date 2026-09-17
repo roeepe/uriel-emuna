@@ -79,9 +79,64 @@ def dur_of(p):
     try: return float(o)
     except Exception: return 0.0
 
+def heal(only):
+    """בונה מחדש את יומן השמע מגיטהאב בלבד — בלי לגעת בדרייב.
+
+    🚨 זה מה שהופך את הדרייב ללא-נחוץ לכל מה שכבר פורסם. היומן
+       (`data/audio_meta_<slug>.json`) הוא שאומר לפייפליין "זה כבר למעלה".
+       אם הוא יאבד, הפייפליין היה מושך מחדש 3,475 הקלטות מהדרייב — ואם
+       הדרייב נוקה בינתיים, השיעורים היו הולכים. כאן הגודל נלקח מ-API של
+       גיטהאב והאורך נמדד מהקובץ עצמו דרך הרשת, ולכן גיטהאב לבדו מספיק.
+    """
+    man = json.load(open(os.path.join(BASE, "data/manifest.json")))
+    if only:
+        man = [r for r in man if r["slug"] == only]
+    by_slug = {}
+    for r in man:
+        by_slug.setdefault(r["slug"], []).append(r)
+
+    for slug, rows in by_slug.items():
+        repo = f"roeepe/uriel-audio-{slug}"
+        have, n = {}, 0
+        while True:
+            t = tag_name(n)
+            got = api("GET", f"https://api.github.com/repos/{repo}/releases/tags/{t}")
+            if not got.get("id"):
+                break
+            for k, v in existing(repo, got["id"]).items():
+                v["tag"] = t
+                have[k] = v
+            n += 1
+
+        mp = os.path.join(BASE, f"data/audio_meta_{slug}.json")
+        meta = json.load(open(mp)) if os.path.exists(mp) else {}
+        todo = [r for r in rows if r["asset"] in have and r["asset"] not in meta]
+        print(f"=== {slug}: {len(have)} ב-release · {len(meta)} ביומן · {len(todo)} לשחזר", flush=True)
+
+        def one(r):
+            a = have[r["asset"]]
+            url = f"https://github.com/{repo}/releases/download/{a['tag']}/{r['asset']}"
+            return r["asset"], {"size": a["size"], "duration": round(dur_of(url)), "tag": a["tag"]}
+
+        done = 0
+        for asset, m in ThreadPoolExecutor(6).map(one, todo):
+            if not m["duration"]:
+                print(f"  לא נמדד אורך: {asset}", flush=True)
+                continue
+            meta[asset] = m
+            done += 1
+            if done % 25 == 0:
+                json.dump(meta, open(mp, "w"), ensure_ascii=False)
+                print(f"  {done}/{len(todo)}", flush=True)
+        json.dump(meta, open(mp, "w"), ensure_ascii=False)
+        print(f"  שוחזרו {done} · היומן מכיל {len(meta)}", flush=True)
+
+
 def main():
     man = json.load(open(os.path.join(BASE, "data/manifest.json")))
     only = sys.argv[1] if len(sys.argv) > 1 else None
+    if only == "--heal":
+        return heal(sys.argv[2] if len(sys.argv) > 2 else None)
     if only: man = [r for r in man if r["slug"] == only]
 
     # 🚨 בדרייב יש קבצים עם סיומת .mp3 שאינם שמע כלל — "49 - ציור עזר13.mp3"
