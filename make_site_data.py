@@ -95,29 +95,73 @@ def parts_of(items):
 def _moreh(sec, word):
     return len(sec) > 1 and "מורה" in sec[0] and word in sec[1]
 
-SPLITS = {
+CFG = json.load(open(f"{D}/collections.json"))
+
+# פיצול מפורש: מורה הנבוכים הוא ספר אחד שנלמד פעמיים, ולכן שני סבבים.
+# הוא מזוהה לפי שתי רמות מדור ולא אחת, ולכן אינו נגזר אוטומטית.
+EXPLICIT = {
     "rambam": [
-        ("rambam", 'כתבי הרמב"ם — הקדמות וספר המצוות',
-         lambda sec: not (sec and "מורה" in sec[0])),
         ("moreh-rishon", 'מורה הנבוכים — סבב לימוד ראשון, תש"פ-תשפ"א',
-         lambda sec: _moreh(sec, "ראשון")),
+         lambda sec: _moreh(sec, "ראשון"), 2),
         ("moreh-sheni", 'מורה הנבוכים — סבב לימוד שני, תשפ"ב-תשפ"ג',
-         lambda sec: _moreh(sec, "שני")),
+         lambda sec: _moreh(sec, "שני"), 2),
     ],
 }
+CLAIMED = {"rambam": lambda sec: bool(sec) and "מורה" in sec[0]}
 
 comp = json.load(open(f"{D}/episodes_composed.json"))
+
+# ---------- כל חיבור באוסף הוא פודקאסט בפני עצמו ----------
+# 🚨 עד 17/9/2026 אוסף שלם היה פיד אחד, ולכן מסילת ישרים — החיבור הרביעי
+#    בכתבי רמח"ל — הייתה מתחילה להישמע רק במרץ 2028, אחרי 352 שיעורים
+#    אחרים. כל חיבור מתפרסם עכשיו במקביל ומתחיל מיד.
+#
+# 🚨 החיבור הראשון בכל אוסף **שומר על ה-slug המקורי**, ולכן הפיד שספוטיפיי
+#    כבר מושך ממנו ממשיך לחיות ורק מצטמצם לחיבור אחד. הפרקים שכבר יצאו בכל
+#    אוסף שייכים כולם לחיבור הראשון — נבדק לפני הפיצול. slug חדש היה יוצר
+#    תוכנית חדשה ומוחק למאזינים את מה שכבר קיבלו.
+
+def _works_of(slug):
+    """שמות החיבורים של אוסף, לפי המדור העליון, בסדר הופעתם בפועל."""
+    claimed = CLAIMED.get(slug, lambda sec: False)
+    out = []
+    for it in comp[slug]["items"]:
+        if not it.get("ready"):
+            continue
+        sec = [x for x in it["section"] if x]
+        if claimed(sec):
+            continue
+        if sec and sec[0] not in out:
+            out.append(sec[0])
+    return out
+
+
+SPLITS = {}
+for _c in CFG["collections"]:
+    if _c not in comp:
+        continue
+    _parts = []
+    for _i, _name in enumerate(_works_of(_c)):
+        _disp = CFG["names"].get(_name, _name)
+        if _i == 0:
+            # 🚨 שיעור בלי מדור (דרשת סיום) נשאר בחיבור הראשון. ברמב"ן הוא
+            #    פרק 1 בפיד והוא כבר יצא — הוצאה שלו הייתה מוחקת אותו אצל
+            #    מי שכבר קיבל.
+            _parts.append((_c, _disp, (lambda sec, n=_name: not sec or sec[0] == n), 1))
+        else:
+            _parts.append((f"{_c}-{_i + 1}", _disp,
+                           (lambda sec, n=_name: bool(sec) and sec[0] == n), 1))
+    SPLITS[_c] = _parts + EXPLICIT.get(_c, [])
 # הסדרה שפוצלה יורדת מהרשימה, ובמקומה נכנסים החלקים שלה
 expanded = {}
 for _slug, _s in comp.items():
     if _slug not in SPLITS:
         expanded[_slug] = _s
         continue
-    for out_slug, out_name, pred in SPLITS[_slug]:
+    for out_slug, out_name, pred, drop in SPLITS[_slug]:
         picked = [i for i in _s["items"] if pred([x for x in i["section"] if x])]
         # כשכל הפודקאסט הוא «מורה הנבוכים, סבב X», אין טעם לחזור על זה
         # בכל שורה — מורידים את שתי הרמות שהפכו לשם הפודקאסט עצמו
-        drop = 2 if out_slug != _slug else 0
         for i in picked:
             i = dict(i)
             i["section"] = [x for x in i["section"] if x][drop:]
@@ -262,91 +306,40 @@ for x in index: print(f"   {x['slug']:11} {x['count']:5} שיעורים {x['hour
 print("search index:", os.path.getsize(f"{OUT}/search.json")//1024, "KB")
 
 # ---------- אוספי סדרות ----------
-# 🚨 חכם שכתב כמה חיבורים אינו סדרה אחת ארוכה. "כתבי רמח"ל" הוא אוסף שבתוכו
-#    מאמר הויכוח, דעת תבונות, דרך ה' ומסילת ישרים — כמו בתיקייה המקורית של
-#    הרב. ספר אחד שמחולק למאמרים (רס"ג, אור השם, מורה נבוכים) נשאר סדרה אחת.
-#    הכללים ב-data/collections.json.
-#
-# 🚨 השכבה הזאת היא **תצוגה בלבד.** קובצי הסדרות ב-site/public/data/<slug>.json
-#    לא נגעו — מהם נבנים הפידים, וספוטיפיי מושך מהם. פיצול שהיה נוגע בהם היה
-#    משנה פידים שכבר פורסמו.
-CFG = json.load(open(f"{D}/collections.json"))
-LOOSE = "שיעורים נוספים"
-
+# כל חיבור הוא כבר סדרה מלאה עם פיד משלה (ראה SPLITS למעלה). כאן רק מקבצים
+# אותם לתצוגה: דף הבית מראה אוסף אחד במקום חמישה חיבורים מפוזרים.
 flat = {x["slug"]: x for x in index}
-works_out, col_index = {}, []
-
-
-def works_of(slug):
-    """חיבורים של סדרה, לפי המדור העליון — בסדר שבו הם מופיעים בפועל."""
-    items = json.load(open(f"{OUT}/{slug}.json"))["items"]
-    order, buckets = [], {}
-    for it in items:
-        k = (it.get("sec") or [LOOSE])[0]
-        if k not in buckets:
-            buckets[k] = []
-            order.append(k)
-        buckets[k].append(it)
-    # שיעור בודד בלי מדור הוא דרשת סיום או דברים במסיבת סיום — מקומו בסוף,
-    # לא בראש האוסף לפני החיבור הראשון.
-    order.sort(key=lambda k: k == LOOSE)
-    return [(k, buckets[k]) for k in order]
-
-
+col_index = []
 for slug in CFG["order"]:
-    src = flat.get(slug)
-    if not src:
-        continue
-    col = CFG["collections"].get(slug)
-    if not col:
-        col_index.append({**src, "kind": "series"})
-        continue
+    if slug in CFG["collections"] and slug in SPLITS:
+        works = [flat[w] for w, *_ in SPLITS[slug] if w in flat]
+        col_index.append({
+            "slug": slug, "kind": "collection",
+            "name": CFG["collections"][slug]["name"],
+            "count": sum(w["count"] for w in works),
+            "hours": sum(w["hours"] for w in works),
+            "works": [{"slug": w["slug"], "name": w["name"], "count": w["count"],
+                       "hours": w["hours"], "links": LINKS.get(w["slug"], {})}
+                      for w in works],
+            "links": LINKS.get(slug, {}),
+        })
+    elif slug in flat:
+        col_index.append({**flat[slug], "kind": "series"})
 
-    works = []
-    for wname, wit in works_of(slug):
-        wslug = f"{slug}-{len(works) + 1}"
-        hours = round(sum(i["secs"] for i in wit) / 3600)
-        # 🚨 בתוך עמוד החיבור, רמת המדור הראשונה היא שם החיבור עצמו — היא
-        #    כבר בכותרת. השארתה הייתה חוזרת בכל שורה ובכל תיאור.
-        wit = [{**i, "sec": (i.get("sec") or [])[1:]} for i in wit]
-        for i in wit:
-            i["part"] = " · ".join(i["sec"][:2]) if i["sec"] else ""
-            i["desc"] = re.sub(r"<p>מתוך: .*?</p>\s*$", "", i["desc"])
-            if i["sec"]:
-                i["desc"] += f"<p>מתוך: {' · '.join(i['sec'])}</p>"
-        works.append({"slug": wslug, "name": CFG["names"].get(wname, wname),
-                      "count": len(wit), "hours": hours, "of": slug})
-        works_out[wslug] = {"slug": wslug, "name": CFG["names"].get(wname, wname),
-                            "collection": col["name"], "col_slug": slug,
-                            "cover": slug, "count": len(wit), "hours": hours,
-                            "feed_of": slug, "links": LINKS.get(slug, {}),
-                            "items": wit}
-    for extra in col.get("also", []):
-        e = flat.get(extra)
-        if not e:
-            continue
-        works.append({"slug": extra, "name": e["name"], "count": e["count"],
-                      "hours": e["hours"], "of": extra, "own": True})
+# בעמוד של חיבור צריך להיות קישור חזרה לאוסף שלו
+for c in col_index:
+    for w in c.get("works", []):
+        d = json.load(open(f"{OUT}/{w['slug']}.json"))
+        d["collection"], d["col_slug"] = c["name"], c["slug"]
+        json.dump(d, open(f"{OUT}/{w['slug']}.json", "w"), ensure_ascii=False)
 
-    col_index.append({"slug": slug, "kind": "collection", "name": col["name"],
-                      "count": sum(w["count"] for w in works),
-                      "hours": sum(w["hours"] for w in works),
-                      "works": works, "links": LINKS.get(slug, {})})
-
-# סדרה שהוזכרה כ-"also" כבר יושבת בתוך אוסף — לא מוצגת שוב בשורש
-inside = {x for c in CFG["collections"].values() for x in c.get("also", [])}
-col_index = [c for c in col_index if c["slug"] not in inside]
-
-for wslug, w in works_out.items():
-    json.dump(w, open(f"{OUT}/w-{wslug}.json", "w"), ensure_ascii=False)
 json.dump(col_index, open(f"{OUT}/index.json", "w"), ensure_ascii=False)
 
-print(f"\nאוספים: {len([c for c in col_index if c['kind'] == 'collection'])} · "
-      f"סדרות עצמאיות: {len([c for c in col_index if c['kind'] == 'series'])} · "
-      f"חיבורים בתוך אוספים: {len(works_out)}")
+ncol = len([c for c in col_index if c["kind"] == "collection"])
+print(f"\nאוספים: {ncol} · סדרות עצמאיות: {len(col_index) - ncol} · "
+      f"פידים בסך הכל: {len(index)}")
 for c in col_index:
     mark = "▸" if c["kind"] == "collection" else " "
-    print(f" {mark} {c['name'][:42]:44} {c['count']:5}")
+    print(f" {mark} {c['name'][:44]:46} {c['count']:5}")
     for w in c.get("works", []):
-        print(f"      └ {w['name'][:38]:40} {w['count']:5}"
-              + ("  (סדרה עם פיד משלה)" if w.get("own") else ""))
+        print(f"      └ {w['slug']:16} {w['name'][:34]:36} {w['count']:5}")

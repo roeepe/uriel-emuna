@@ -12,7 +12,9 @@ const attr = s => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 module.exports = (req, res) => {
-  const slug = String((req.query && req.query.s) || '').replace(/[^a-z-]/g, '');
+  // 🚨 הספרות חייבות להיות מותרות: חיבור שני באוסף הוא ramchal-2, ובלעדיהן
+  //    הוא הפך ל-ramchal- וכל 12 הפידים החדשים חזרו ריקים.
+  const slug = String((req.query && req.query.s) || '').replace(/[^a-z0-9-]/g, '');
   const file = path.join(process.cwd(), 'public', 'data', `${slug}.json`);
   if (!slug || !fs.existsSync(file)) {
     res.status(404).send('לא נמצאה סדרה בשם הזה');

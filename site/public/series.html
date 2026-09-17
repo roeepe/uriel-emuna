@@ -64,13 +64,8 @@ const ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="tru
 const ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="7" y="5" width="4" height="14" rx="1"/><rect x="13" y="5" width="4" height="14" rx="1"/></svg>';
 const fmt = new Intl.NumberFormat('he-IL');
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-// אותו עמוד משרת סדרה עצמאית (/s/) וחיבור בתוך אוסף (/w/). ההבדל היחיד
-// הוא מאיזה קובץ קוראים ולאן חוזרים.
-const mw = location.pathname.match(/\/w\/([a-z0-9-]+)/);
-const ms = location.pathname.match(/\/s\/([a-z0-9-]+)/);
-const isWork = !!mw;
-const slug = (mw || ms || [])[1] || 'kuzari';
-const dataUrl = isWork ? `/data/w-${slug}.json` : `/data/${slug}.json`;
+const slug = (location.pathname.match(/\/s\/([a-z0-9-]+)/) || [])[1] || 'kuzari';
+const dataUrl = `/data/${slug}.json`;
 
 let DATA = null, filter = 'all', query = '', shown = 150;
 
@@ -86,16 +81,14 @@ fetch(dataUrl).then(r => r.json()).then(d => {
     nl.textContent = d.note; nl.hidden = false;
   }
 
-  if (isWork) {
+  // חיבור בתוך אוסף חוזר לאוסף שלו, לא לדף הבית
+  if (d.col_slug) {
     document.getElementById('back').href = `/c/${d.col_slug}`;
     document.getElementById('back-t').textContent = d.collection;
   }
 
   const L = d.links || {};
-  // 🚨 לחיבור בתוך אוסף אין פיד משלו — הפיד הוא של האוסף כולו, וכך גם כתוב
-  //    למטה. קישור שמתחזה לפיד של החיבור היה שולח את המאזין לפודקאסט אחר.
-  const feedSlug = d.feed_of || slug;
-  const rss = L.rss || `${location.origin}/feed/${feedSlug}.xml`;
+  const rss = L.rss || `${location.origin}/feed/${slug}.xml`;
   document.getElementById('actions').innerHTML = [
     `<a class="btn btn-primary" href="${rss}">
        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5" fill="currentColor" stroke="none"/></svg>
@@ -109,10 +102,10 @@ fetch(dataUrl).then(r => r.json()).then(d => {
     L.page ? `<a class="btn" href="${L.page}" rel="noopener">לעמוד הסדרה</a>` : '',
   ].join('');
 
-  if (isWork) {
+  if (d.col_slug) {
     const nl = document.getElementById('note');
-    nl.innerHTML = `כל השיעורים כאן זמינים להאזנה ולהורדה. בפודקאסט החיבור הזה
-      מתפרסם כחלק מ<a href="/c/${d.col_slug}">${esc(d.collection)}</a>.`;
+    nl.innerHTML = `חיבור מתוך <a href="/c/${d.col_slug}">${esc(d.collection)}</a>,
+      ופודקאסט בפני עצמו.`;
     nl.hidden = false;
   }
 
@@ -233,5 +226,6 @@ document.getElementById('p-close').addEventListener('click', () => {
   cur = null; paint();
 });
 </script>
+<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

@@ -11,10 +11,6 @@
     {
       "source": "/c/:slug",
       "destination": "/collection.html"
-    },
-    {
-      "source": "/w/:slug",
-      "destination": "/series.html"
     }
   ]
 }
