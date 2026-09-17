@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/mo9xy7z438yr",
+      "destination": "/mo9xy7z438yr.html"
+    },
+    {
       "source": "/s/:slug",
       "destination": "/series.html"
     },

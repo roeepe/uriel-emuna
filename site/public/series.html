@@ -149,6 +149,15 @@ function match(i) {
   return query.toLowerCase().split(/\s+/).every(w => hay.includes(w));
 }
 
+// סימון עדין של כמה פעמים השיעור ירד. מופיע רק משלוש ומעלה — מתחת לזה
+// המספר רועש ולא אומר דבר, ו«1 הורדה» ליד שיעור נראה כמו כישלון.
+function plays(i) {
+  if (!i.dl || i.dl < 3) return '';
+  return `<span class="plays" title="הורדות מאז שהשיעור עלה, אחרי סינון סריקות של פלטפורמות">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 12h3l2.5-7 4 14L15 9l2 3h4"/></svg>
+    ${fmt.format(i.dl)}</span>`;
+}
+
 function render() {
   const rows = DATA.items.filter(match);
   document.getElementById('count').textContent =
@@ -174,6 +183,7 @@ function render() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7.5 11 4.5 4.5 4.5-4.5"/><path d="M5 19h14"/></svg>
             הורדה
           </a>
+          ${plays(i)}
           ${pending(i)}
         </p>
         <div class="ep-desc">${i.desc}</div>

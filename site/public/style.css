@@ -202,3 +202,8 @@ ol.eps{list-style:none; margin:0; padding:0; display:flex; flex-direction:column
 .how span{color:var(--ink-2); font-size:.94rem}
 
 footer .stats{margin-block-end:var(--s4)}
+
+/* סימון ההורדות ליד שיעור — עדין בכוונה: מידע, לא הישג */
+.plays{display:inline-flex; align-items:center; gap:5px; color:var(--ink-3);
+  font-variant-numeric:tabular-nums}
+.plays svg{width:14px; height:14px; opacity:.75}

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 🚨 עמוד פרטי. noindex כדי שלא ייקלט בגוגל, והכתובת עצמה אינה ניתנת
+     לניחוש. אין אליו קישור משום מקום באתר. -->
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>נתוני האזנה — לומדים אמונה</title>
+<meta name="theme-color" content="#F7F3EA">
+<link rel="icon" href="/cover/col-ramchal.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;500;600;700&family=Frank+Ruhl+Libre:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+<style>
+  .big{display:grid; gap:var(--s4); margin:var(--s5) 0;
+    grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+  .big div{padding:var(--s4); background:var(--surface);
+    border:1px solid var(--line); border-radius:var(--r-lg)}
+  .big dt{margin:0 0 var(--s1); color:var(--ink-3); font-size:.82rem; font-weight:600}
+  .big dd{margin:0; font-family:"Frank Ruhl Libre",serif; font-size:2rem;
+    font-weight:800; font-variant-numeric:tabular-nums; line-height:1.1}
+  .big small{display:block; margin-top:var(--s1); color:var(--ink-3); font-size:.78rem;
+    font-weight:400; font-family:"Noto Sans Hebrew",sans-serif}
+
+  table{width:100%; border-collapse:collapse; margin:var(--s4) 0 var(--s6)}
+  th,td{text-align:start; padding:10px 12px; border-bottom:1px solid var(--line)}
+  th{color:var(--ink-3); font-size:.8rem; font-weight:600; white-space:nowrap}
+  td.num{text-align:end; font-variant-numeric:tabular-nums; font-weight:700; white-space:nowrap}
+  tbody tr:nth-child(odd){background:var(--surface)}
+  .col{display:block; color:var(--ink-3); font-size:.78rem}
+  .bar{height:5px; border-radius:3px; background:var(--accent-soft); margin-top:5px}
+  .bar i{display:block; height:100%; border-radius:3px; background:var(--accent)}
+
+  .note{padding:var(--s4); border-radius:var(--r-lg); background:var(--accent-soft);
+    color:var(--ink-2); margin:var(--s5) 0}
+  .note b{color:var(--ink)}
+  .warn{background:transparent; border:1px dashed var(--line-2)}
+  details{margin:var(--s4) 0; color:var(--ink-2)}
+  summary{cursor:pointer; font-weight:600; color:var(--ink)}
+  .stamp{color:var(--ink-3); font-size:.85rem}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">עמוד פרטי — לא מופיע בגוגל ואין אליו קישור מהאתר</p>
+    <h1>נתוני האזנה<span>לומדים אמונה · הרב בן ציון אוריאל</span></h1>
+    <p class="stamp" id="stamp">טוען…</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <dl class="big" id="big"></dl>
+
+  <div class="note" id="honest"></div>
+
+  <h2 class="section-h">לפי חיבור</h2>
+  <table>
+    <thead><tr><th>חיבור</th><th>פרקים שיצאו</th><th>הורדות</th><th>השיעור המבוקש</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <details id="sweeps"></details>
+
+  <div class="note warn">
+    <b>כניסות לאתר.</b> נמדדות בנפרד, במערכת של Vercel שמסננת בוטים בעצמה.
+    התוכנית החינמית שלה אינה מאפשרת לתוכנית אחרת לקרוא את המספרים, ולכן הם
+    אינם מופיעים בדף הזה אוטומטית. המספר העדכני נמצא תמיד בלוח של Vercel.
+  </div>
+</main>
+
+<script>
+const fmt = new Intl.NumberFormat('he-IL');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+fetch('/data/mo9xy7z438yr.json?t=' + Date.now()).then(r => r.json()).then(d => {
+  const when = new Date(d.updated);
+  document.getElementById('stamp').textContent =
+    `עודכן ${when.toLocaleDateString('he-IL')} בשעה ${when.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})} · נמדד מ-${d.since}`;
+
+  document.getElementById('big').innerHTML = [
+    ['הורדות אמיתיות', fmt.format(d.downloads), 'אחרי סינון סריקות'],
+    ['סוננו כסריקות', fmt.format(d.filtered), 'פלטפורמות, לא אנשים'],
+    ['פרקים שכבר יצאו', fmt.format(d.published), `מתוך ${fmt.format(d.episodes)}`],
+    ['פודקאסטים', fmt.format(d.series.length), 'חיבור לכל אחד'],
+  ].map(([t, v, s]) => `<div><dt>${t}</dt><dd>${v}</dd><small>${s}</small></div>`).join('');
+
+  const pct = d.raw ? Math.round(100 * d.filtered / d.raw) : 0;
+  document.getElementById('honest').innerHTML =
+    `<b>למה המספר נמוך ממה שגיטהאב מראה.</b> השרת שמאחסן את קובצי השמע סָפַר
+     ${fmt.format(d.raw)} הורדות, אבל <b>${pct}%</b> מהן הן פלטפורמות שמורידות
+     את כל הפרקים בבת אחת כדי לארח עותק משלהן — לא אנשים. כאן מוצג רק מה שנשאר.
+     <br><br>
+     <b>וגם מה שנשאר אינו «האזנות».</b> אפליקציית פודקאסט מורידה פרק מראש גם
+     אם המאזין לא לחץ נגן. המספר כאן הוא <b>הורדות</b> — הגבול העליון של
+     ההאזנה, לא ההאזנה עצמה. נתוני האזנה מדויקים קיימים רק אצל ספוטיפיי.`;
+
+  const max = Math.max(1, ...d.series.map(r => r.downloads));
+  document.getElementById('rows').innerHTML = d.series.map(r => `
+    <tr>
+      <td>${esc(r.name)}${r.collection ? `<span class="col">${esc(r.collection)}</span>` : ''}</td>
+      <td class="num">${fmt.format(r.published)}<span class="col">מתוך ${fmt.format(r.episodes)}</span></td>
+      <td class="num">${fmt.format(r.downloads)}
+        <span class="bar"><i style="width:${Math.round(100*r.downloads/max)}%"></i></span></td>
+      <td>${r.top && r.top[0] && r.top[0].dl ? `${esc(r.top[0].title)} <span class="col">${fmt.format(r.top[0].dl)} הורדות</span>` : '<span class="col">—</span>'}</td>
+    </tr>`).join('');
+
+  document.getElementById('sweeps').innerHTML =
+    `<summary>מה בדיוק סוננו (${d.sweeps.length} סריקות אחרונות)</summary>
+     <p>סריקה מזוהה כשרוב מוחלט של פרקי אותו חיבור עלו באותו מספר בדיוק באותו
+        יום. אדם מוריד פרק או שניים; פלטפורמה מורידה את כולם.</p>
+     <ul>${d.sweeps.map(s => `<li><b>${s.day}</b> — ${esc(s.slug)}:
+        ${s.per_episode}+ בכל אחד מ-${fmt.format(s.episodes)} הפרקים
+        <span class="col">(${fmt.format(s.removed)} הורדות הוסרו)</span></li>`).join('')}</ul>`;
+}).catch(() => {
+  document.getElementById('stamp').textContent = 'לא הצלחתי לטעון את הנתונים.';
+});
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>

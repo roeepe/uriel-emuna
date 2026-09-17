@@ -4,12 +4,15 @@ import json, os, re, uuid, glob
 D = "data"; OUT = "site/public/data"
 NS = uuid.UUID("7a3c9d20-0000-4000-8000-757269656c00")
 LINKS = json.load(open(f"{D}/links.json"))
+# הורדות אמיתיות לכל שיעור, אחרי סינון סריקות של פלטפורמות (stats_build.py)
+_dlf = f"{D}/downloads.json"
+DL = json.load(open(_dlf)) if os.path.exists(_dlf) else {}
 
 # ---------- תזמון הפרסום לפודקאסט ----------
 # 🚨 האתר והפיד אינם אותו דבר: באתר *כל* השיעורים זמינים מיד להאזנה
 #    ולהורדה, ובפיד הם נכנסים בהדרגה — שיעור בכל יום א׳-ה׳ ב-15:00, בלי
 #    חגים. זה מה שמאפשר לפודקאסט להיראות חי לאורך זמן במקום להישפך בבת אחת.
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 from zoneinfo import ZoneInfo
 IL = ZoneInfo("Asia/Jerusalem")
 
@@ -47,10 +50,12 @@ def schedule(n, start):
             f"לפני שממשיכים, אחרת יתפרסמו שיעורים בחגים.")
     return out
 
-# 🚨 מתחילים שבועיים אחורה, לא מחר: פיד שכל הפרקים בו עתידיים יוצא ריק,
-#    וספוטיפיי לא מקבל פיד ריק. ככה כל סדרה נולדת עם כ-10 פרקים באוויר,
-#    ומשם ממשיכה שיעור ביום.
-START = datetime.now(IL).date() - timedelta(days=14)
+# 🚨 תאריך העוגן **קבוע**, ונקרא מקובץ. הוא היה מחושב כ"היום פחות 14 יום",
+#    וזה אומר שכל בנייה מחדש הזיזה את הלוח כולו קדימה: בנייה בעוד שבוע
+#    הייתה מחזירה כל פודקאסט מ-9 פרקים ל-4, כלומר **מוחקת פרקים שכבר הגיעו
+#    למאזינים**. הבנייה כמעט ולא רצה, ולכן זה לא התפוצץ — עד שהוספנו
+#    רענון יומי. מכאן ואילך הלוח מתקדם עם הזמן, לא זז איתו.
+START = date.fromisoformat(json.load(open(f"{D}/schedule.json"))["start"])
 
 # סדרה שממתינה לסדרה אחרת. שני הסבבים במורה הנבוכים הם אותו ספר, ואין טעם
 # שיתפרסמו במקביל — הסבב השני מתחיל רק אחרי שהראשון הסתיים.
@@ -205,6 +210,7 @@ for slug, s in comp.items():
             "dur": hhmmss(it["duration"]),
             "secs": it["duration"],
             "guid": str(uuid.uuid5(NS, it["asset"])),
+            "dl": DL.get(it["asset"], 0),
             "src": it.get("source", "structure"),
         })
     hours = round(sum(i["secs"] for i in items) / 3600)
@@ -343,3 +349,43 @@ for c in col_index:
     print(f" {mark} {c['name'][:44]:46} {c['count']:5}")
     for w in c.get("works", []):
         print(f"      └ {w['slug']:16} {w['name'][:34]:36} {w['count']:5}")
+
+
+# ---------- נתונים לדף הפרטי ----------
+# 🚨 המספר נקרא "הורדות" ולא "האזנות" בכוונה. אפליקציית פודקאסט שמורידה
+#    מראש נספרת גם אם איש לא לחץ נגן, ולכן "האזנות" היה מספר מנופח.
+_hist = json.load(open(f"{D}/stats_history.json"))["snapshots"]
+_log = json.load(open(f"{D}/sweeps.json")) if os.path.exists(f"{D}/sweeps.json") else []
+rows = []
+for c in col_index:
+    for w in (c.get("works") or [c]):
+        if w.get("external"):
+            continue
+        try:
+            d = json.load(open(f"{OUT}/{w['slug']}.json"))
+        except FileNotFoundError:
+            continue
+        live = [i for i in d["items"]
+                if i.get("pub") and datetime.fromisoformat(i["pub"]) <= datetime.now(IL)]
+        rows.append({
+            "slug": w["slug"], "name": w["name"],
+            "collection": c["name"] if c["kind"] == "collection" else None,
+            "episodes": w["count"], "published": len(live),
+            "downloads": sum(i.get("dl", 0) for i in d["items"]),
+            "top": sorted(({"n": i["n"], "title": i["title"], "dl": i.get("dl", 0)}
+                           for i in d["items"]), key=lambda x: -x["dl"])[:3],
+        })
+rows.sort(key=lambda r: -r["downloads"])
+json.dump({
+    "updated": datetime.now(IL).isoformat(timespec="minutes"),
+    "since": _hist[0]["at"][:10],
+    "raw": sum(_hist[-1]["series"][s_][k] - _hist[0]["series"].get(s_, {}).get(k, 0)
+               for s_ in _hist[-1]["series"] for k in _hist[-1]["series"][s_]),
+    "filtered": sum(x["removed"] for x in _log),
+    "sweeps": _log[-12:],
+    "downloads": sum(r["downloads"] for r in rows),
+    "episodes": sum(r["episodes"] for r in rows),
+    "published": sum(r["published"] for r in rows),
+    "series": rows,
+}, open(f"{OUT}/{json.load(open(f'{D}/stats_path.json'))['path']}.json", "w"), ensure_ascii=False)
+print(f"\nנתוני הורדות: {sum(r['downloads'] for r in rows):,} אמיתיות")

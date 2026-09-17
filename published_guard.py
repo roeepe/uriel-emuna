@@ -27,10 +27,12 @@ CHECK_ONLY = "--check" in sys.argv
 
 def main():
     now = datetime.now(timezone.utc)
-    snap = json.load(open(SNAP)) if os.path.exists(SNAP) else {}
+    raw = json.load(open(SNAP)) if os.path.exists(SNAP) else {}
+    counts = raw.pop("_counts", {}) if isinstance(raw, dict) else {}
+    snap = raw
     index = json.load(open(f"{OUT}/index.json"))
 
-    broken, added = [], 0
+    broken, shrunk, added = [], [], 0
     for entry in index:
         slug = entry["slug"]
         if entry.get("external"):
@@ -53,20 +55,33 @@ def main():
                 added += 1
             elif prev != asset:
                 broken.append((slug, pub[:10], prev, asset, it["title"]))
+        # 🚨 גם ספירה יורדת היא אובדן. 17/9/2026: תאריך העוגן של הלוח חושב
+        #    כ"היום פחות 14 יום", ולכן כל בנייה הזיזה את הלוח קדימה והחזירה
+        #    פודקאסט מ-9 פרקים ל-4. אף פרק לא "הוחלף" — הם פשוט נעלמו,
+        #    והבדיקה לפי תאריך לבדה לא ראתה את זה.
+        was_n = counts.get(slug, 0)
+        now_n = len(now_out)
+        if now_n < was_n:
+            shrunk.append((slug, was_n, now_n))
+        counts[slug] = max(now_n, was_n)
         snap[slug] = now_out
+
+    for slug, was_n, now_n in shrunk:
+        print(f'❌ {slug}: מספר הפרקים שיצאו ירד מ-{was_n} ל-{now_n} — פרקים נעלמו')
 
     for slug, day, prev, cur, title in broken:
         print(f'❌ {slug} · {day}: הפרק שיצא הוחלף')
         print(f'     היה: {prev}')
         print(f'     עכשיו: {cur}  ({title})')
 
-    if not broken:
-        print(f'✅ אף פרק שפורסם לא הוחלף' + (f' · נרשמו {added} פרקים חדשים' if added else ''))
+    if not broken and not shrunk:
+        print(f'✅ אף פרק שפורסם לא הוחלף ולא נעלם'
+              + (f' · נרשמו {added} פרקים חדשים' if added else ''))
 
     if not CHECK_ONLY:
-        json.dump(snap, open(SNAP, "w"), ensure_ascii=False, indent=1)
+        json.dump({**snap, "_counts": counts}, open(SNAP, "w"), ensure_ascii=False, indent=1)
 
-    return 1 if broken else 0
+    return 1 if (broken or shrunk) else 0
 
 
 if __name__ == "__main__":

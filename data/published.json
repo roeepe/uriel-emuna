@@ -111,5 +111,16 @@
   "2026-09-14T15:00:00+03:00": "ramchal-ea5e817b87.mp3",
   "2026-09-15T15:00:00+03:00": "ramchal-b85447e79c.mp3",
   "2026-09-16T15:00:00+03:00": "ramchal-b45bb2ee41.mp3"
+ },
+ "_counts": {
+  "saadia": 9,
+  "chovot": 9,
+  "rambam": 9,
+  "ramban": 9,
+  "haran": 9,
+  "or-hashem": 9,
+  "ikarim": 9,
+  "maharal": 9,
+  "ramchal": 9
  }
 }
