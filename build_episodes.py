@@ -75,6 +75,10 @@ def load_rows():
 def main():
     series = json.load(open(os.path.join(D, "series.json")))
     manifest = {r["path"]: r for r in json.load(open(os.path.join(D, "manifest.json")))}
+    # קובץ שאינו שמע (ראה data/not_audio.json) אינו שיעור — יורד כאן, כדי
+    # שלא ייספר בכותרות ובמספור הרץ של הסדרה.
+    _na = os.path.join(D, "not_audio.json")
+    skip = set(json.load(open(_na))["paths"]) if os.path.exists(_na) else set()
     meta = {}
     import glob
     for f in glob.glob(os.path.join(D, "audio_meta_*.json")):
@@ -87,6 +91,8 @@ def main():
         rows = [r for r in load_rows() if r[0] == int(snum)]
         items = []
         for _, path, folders, fname, _row in rows:
+            if path in skip:
+                continue
             stem = re.sub(r"\.(mp3|m4a|wav|3gp)$", "", fname, flags=re.I)
             pre, num, rest = parse_stem(stem)
             items.append({

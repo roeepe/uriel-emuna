@@ -8,3 +8,11 @@ if [ $? -ne 0 ]; then
     >/dev/null 2>&1
 fi
 echo "$(date) $(echo "$out" | tail -1)" >> check.log
+
+# 🚨 פרק שכבר יצא בפיד לא יוחלף בפרק אחר — ראה published_guard.py.
+# הוספת שיעורים באמצע סדרה מזיזה את לוח הפרסום של כל מי שאחריהם.
+if ! python3 published_guard.py >> check.log 2>&1; then
+  ~/personal-ops/whatsapp/notify.js pending add \
+    "פרק שכבר יצא באחד הפודקאסטים הוחלף בפרק אחר, וזה אומר שהוא נעלם למי שכבר מנוי. צריך שאבדוק לפני שיוצא פרק נוסף." \
+    >/dev/null 2>&1
+fi

@@ -260,3 +260,93 @@ tot = sum(x["count"] for x in index)
 print(f"{len(index)} סדרות · {tot} שיעורים · {sum(x['hours'] for x in index)} שעות")
 for x in index: print(f"   {x['slug']:11} {x['count']:5} שיעורים {x['hours']:5} שעות  {x['name'][:40]}")
 print("search index:", os.path.getsize(f"{OUT}/search.json")//1024, "KB")
+
+# ---------- אוספי סדרות ----------
+# 🚨 חכם שכתב כמה חיבורים אינו סדרה אחת ארוכה. "כתבי רמח"ל" הוא אוסף שבתוכו
+#    מאמר הויכוח, דעת תבונות, דרך ה' ומסילת ישרים — כמו בתיקייה המקורית של
+#    הרב. ספר אחד שמחולק למאמרים (רס"ג, אור השם, מורה נבוכים) נשאר סדרה אחת.
+#    הכללים ב-data/collections.json.
+#
+# 🚨 השכבה הזאת היא **תצוגה בלבד.** קובצי הסדרות ב-site/public/data/<slug>.json
+#    לא נגעו — מהם נבנים הפידים, וספוטיפיי מושך מהם. פיצול שהיה נוגע בהם היה
+#    משנה פידים שכבר פורסמו.
+CFG = json.load(open(f"{D}/collections.json"))
+LOOSE = "שיעורים נוספים"
+
+flat = {x["slug"]: x for x in index}
+works_out, col_index = {}, []
+
+
+def works_of(slug):
+    """חיבורים של סדרה, לפי המדור העליון — בסדר שבו הם מופיעים בפועל."""
+    items = json.load(open(f"{OUT}/{slug}.json"))["items"]
+    order, buckets = [], {}
+    for it in items:
+        k = (it.get("sec") or [LOOSE])[0]
+        if k not in buckets:
+            buckets[k] = []
+            order.append(k)
+        buckets[k].append(it)
+    # שיעור בודד בלי מדור הוא דרשת סיום או דברים במסיבת סיום — מקומו בסוף,
+    # לא בראש האוסף לפני החיבור הראשון.
+    order.sort(key=lambda k: k == LOOSE)
+    return [(k, buckets[k]) for k in order]
+
+
+for slug in CFG["order"]:
+    src = flat.get(slug)
+    if not src:
+        continue
+    col = CFG["collections"].get(slug)
+    if not col:
+        col_index.append({**src, "kind": "series"})
+        continue
+
+    works = []
+    for wname, wit in works_of(slug):
+        wslug = f"{slug}-{len(works) + 1}"
+        hours = round(sum(i["secs"] for i in wit) / 3600)
+        # 🚨 בתוך עמוד החיבור, רמת המדור הראשונה היא שם החיבור עצמו — היא
+        #    כבר בכותרת. השארתה הייתה חוזרת בכל שורה ובכל תיאור.
+        wit = [{**i, "sec": (i.get("sec") or [])[1:]} for i in wit]
+        for i in wit:
+            i["part"] = " · ".join(i["sec"][:2]) if i["sec"] else ""
+            i["desc"] = re.sub(r"<p>מתוך: .*?</p>\s*$", "", i["desc"])
+            if i["sec"]:
+                i["desc"] += f"<p>מתוך: {' · '.join(i['sec'])}</p>"
+        works.append({"slug": wslug, "name": CFG["names"].get(wname, wname),
+                      "count": len(wit), "hours": hours, "of": slug})
+        works_out[wslug] = {"slug": wslug, "name": CFG["names"].get(wname, wname),
+                            "collection": col["name"], "col_slug": slug,
+                            "cover": slug, "count": len(wit), "hours": hours,
+                            "feed_of": slug, "links": LINKS.get(slug, {}),
+                            "items": wit}
+    for extra in col.get("also", []):
+        e = flat.get(extra)
+        if not e:
+            continue
+        works.append({"slug": extra, "name": e["name"], "count": e["count"],
+                      "hours": e["hours"], "of": extra, "own": True})
+
+    col_index.append({"slug": slug, "kind": "collection", "name": col["name"],
+                      "count": sum(w["count"] for w in works),
+                      "hours": sum(w["hours"] for w in works),
+                      "works": works, "links": LINKS.get(slug, {})})
+
+# סדרה שהוזכרה כ-"also" כבר יושבת בתוך אוסף — לא מוצגת שוב בשורש
+inside = {x for c in CFG["collections"].values() for x in c.get("also", [])}
+col_index = [c for c in col_index if c["slug"] not in inside]
+
+for wslug, w in works_out.items():
+    json.dump(w, open(f"{OUT}/w-{wslug}.json", "w"), ensure_ascii=False)
+json.dump(col_index, open(f"{OUT}/index.json", "w"), ensure_ascii=False)
+
+print(f"\nאוספים: {len([c for c in col_index if c['kind'] == 'collection'])} · "
+      f"סדרות עצמאיות: {len([c for c in col_index if c['kind'] == 'series'])} · "
+      f"חיבורים בתוך אוספים: {len(works_out)}")
+for c in col_index:
+    mark = "▸" if c["kind"] == "collection" else " "
+    print(f" {mark} {c['name'][:42]:44} {c['count']:5}")
+    for w in c.get("works", []):
+        print(f"      └ {w['name'][:38]:40} {w['count']:5}"
+              + ("  (סדרה עם פיד משלה)" if w.get("own") else ""))

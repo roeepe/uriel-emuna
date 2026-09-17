@@ -65,26 +65,35 @@ let INDEX = [], SEARCH = null, names = {};
 
 fetch('/data/index.json').then(r => r.json()).then(ix => {
   INDEX = ix;
-  ix.forEach(s => names[s.slug] = s.name);
+  // מפתח החיפוש מצביע על הסדרה שממנה נבנה הפיד, ולכן צריך גם את שמות
+  // החיבורים שבתוך האוסף — אחרת תוצאה ממורה הנבוכים הייתה מוצגת בלי שם.
+  ix.forEach(s => {
+    names[s.slug] = s.name;
+    (s.works || []).forEach(w => { if (!names[w.slug]) names[w.slug] = w.name; });
+  });
   const eps = ix.reduce((a, b) => a + b.count, 0);
   const hrs = ix.reduce((a, b) => a + b.hours, 0);
   document.getElementById('stats').innerHTML =
-    `<div><dt>סדרות</dt><dd>${ix.length}</dd></div>` +
+    `<div><dt>סדרות</dt><dd>${ix.reduce((a, b) => a + (b.kind === 'collection' ? b.works.length : 1), 0)}</dd></div>` +
     `<div><dt>שיעורים</dt><dd>${fmt.format(eps)}</dd></div>` +
     `<div><dt>שעות לימוד</dt><dd>${fmt.format(hrs)}</dd></div>`;
   document.getElementById('grid').innerHTML = ix.map(card).join('');
 });
 
 function card(s) {
-  const parts = (s.parts || []).slice(0, 4)
-    .map(p => `<li>${esc(p)}</li>`).join('');
+  // אוסף מציג את שמות החיבורים שבו ומוביל לעמוד האוסף; סדרה עצמאית מציגה
+  // את חלקי הספר ומובילה ישר לשיעורים.
+  const isCol = s.kind === 'collection';
+  const lines = isCol ? s.works.map(w => w.name) : (s.parts || []);
+  const parts = lines.slice(0, 4).map(p => `<li>${esc(p)}</li>`).join('');
+  const more = lines.length > 4 ? `<li class="muted">ועוד ${lines.length - 4}…</li>` : '';
   return `<li class="card">
-    <a class="card-link" href="/s/${s.slug}">
+    <a class="card-link" href="${isCol ? `/c/${s.slug}` : `/s/${s.slug}`}">
       <img class="cover" src="/cover/${s.slug}.jpg" alt="" width="96" height="96" loading="lazy">
       <div class="card-body">
         <h3>${esc(s.name)}</h3>
-        <p class="card-meta">${fmt.format(s.count)} שיעורים · ${fmt.format(s.hours)} שעות</p>
-        ${parts ? `<ul class="parts">${parts}</ul>` : ''}
+        <p class="card-meta">${isCol ? `${fmt.format(s.works.length)} חיבורים · ` : ''}${fmt.format(s.count)} שיעורים · ${fmt.format(s.hours)} שעות</p>
+        ${parts ? `<ul class="parts">${parts}${more}</ul>` : ''}
       </div>
     </a>
   </li>`;

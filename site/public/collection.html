@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>אוסף — שיעורי אמונה עם הרב בן ציון אוריאל</title>
+<meta name="theme-color" content="#F7F3EA">
+<link rel="icon" href="/cover/kuzari.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<a class="skip" href="#works">דילוג לרשימת החיבורים</a>
+
+<div class="wrap" style="padding-top:16px">
+  <a class="back" href="/">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    כל הסדרות
+  </a>
+</div>
+
+<header class="wrap s-head">
+  <img class="cover" id="cover" src="" alt="" width="128" height="128">
+  <div style="flex:1 1 340px; min-width:0">
+    <h1 id="name">…</h1>
+    <p class="card-meta" id="meta"></p>
+    <p class="card-meta" id="note"></p>
+    <div class="actions" id="actions"></div>
+  </div>
+</header>
+
+<main class="wrap" id="works">
+  <h2 class="section-h">החיבורים שבאוסף</h2>
+  <ul class="grid" id="grid"></ul>
+</main>
+
+<script>
+const fmt = new Intl.NumberFormat('he-IL');
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const slug = (location.pathname.match(/\/c\/([a-z0-9-]+)/) || [])[1] || '';
+
+fetch('/data/index.json').then(r => r.json()).then(ix => {
+  const c = ix.find(x => x.slug === slug && x.kind === 'collection');
+  if (!c) { location.replace('/'); return; }
+
+  document.title = `${c.name} — שיעורי אמונה`;
+  document.getElementById('name').textContent = c.name;
+  document.getElementById('cover').src = `/cover/${c.slug}.jpg`;
+  document.getElementById('meta').textContent =
+    `${fmt.format(c.works.length)} חיבורים · ${fmt.format(c.count)} שיעורים · ${fmt.format(c.hours)} שעות לימוד`;
+  document.getElementById('note').textContent =
+    'כל חיבור נלמד כאן מתחילתו ועד סופו. אפשר להאזין ולהוריד כל שיעור, או להירשם לפודקאסט.';
+
+  const L = c.links || {};
+  document.getElementById('actions').innerHTML = [
+    `<a class="btn btn-primary" href="${L.rss || `${location.origin}/feed/${c.slug}.xml`}">
+       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5" fill="currentColor" stroke="none"/></svg>
+       כתובת הפודקאסט (RSS)</a>`,
+    L.spotify
+      ? `<a class="btn" href="${L.spotify}" rel="noopener">בספוטיפיי</a>`
+      : `<span class="btn" aria-disabled="true">בספוטיפיי — בקרוב</span>`,
+  ].join('');
+
+  // חיבור שיש לו פיד משלו מקבל עמוד סדרה מלא (/s/); חיבור שנגזר מתוך
+  // האוסף מקבל עמוד חיבור (/w/) שקורא מקובץ משלו.
+  document.getElementById('grid').innerHTML = c.works.map(w => `
+    <li class="card">
+      <a class="card-link" href="${w.own ? `/s/${w.slug}` : `/w/${w.slug}`}">
+        <img class="cover" src="/cover/${c.slug}.jpg" alt="" width="96" height="96" loading="lazy">
+        <div class="card-body">
+          <h3>${esc(w.name)}</h3>
+          <p class="card-meta">${fmt.format(w.count)} שיעורים · ${fmt.format(w.hours)} שעות</p>
+          ${w.own ? '<ul class="parts"><li>פודקאסט נפרד משלו</li></ul>' : ''}
+        </div>
+      </a>
+    </li>`).join('');
+});
+</script>
+</body>
+</html>

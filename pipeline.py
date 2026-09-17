@@ -83,6 +83,17 @@ def main():
     man = json.load(open(os.path.join(BASE, "data/manifest.json")))
     only = sys.argv[1] if len(sys.argv) > 1 else None
     if only: man = [r for r in man if r["slug"] == only]
+
+    # 🚨 בדרייב יש קבצים עם סיומת .mp3 שאינם שמע כלל — "49 - ציור עזר13.mp3"
+    #    הוא PDF של ציור עזר. ffmpeg נופל עליהם, הם נרשמים FAIL בכל ריצה,
+    #    וכך כישלון אמיתי נבלע ברעש. הם אינם שיעורים ולכן פשוט מדולגים.
+    _na = os.path.join(BASE, "data/not_audio.json")
+    skip = set(json.load(open(_na))["paths"]) if os.path.exists(_na) else set()
+    if skip:
+        before = len(man)
+        man = [r for r in man if r["path"] not in skip]
+        if before != len(man):
+            print(f"מדלג על {before - len(man)} קבצים שאינם שמע (data/not_audio.json)", flush=True)
     os.makedirs(WORK, exist_ok=True)
     meta_path = os.path.join(BASE, f"data/audio_meta_{only or 'all'}.json")
     meta = json.load(open(meta_path)) if os.path.exists(meta_path) else {}
