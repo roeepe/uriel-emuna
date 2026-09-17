@@ -89,6 +89,12 @@ def main():
     #    וכך כישלון אמיתי נבלע ברעש. הם אינם שיעורים ולכן פשוט מדולגים.
     _na = os.path.join(BASE, "data/not_audio.json")
     skip = set(json.load(open(_na))["paths"]) if os.path.exists(_na) else set()
+
+    # 🚨 חיתוך קצה לפי בקשת הרב (data/trims.json). החיתוך חי כאן ולא בדרייב:
+    #    ההקלטה המקורית נשארת שלמה, והחיתוך מוחל בכל קידוד — ולכן הוא שורד
+    #    הרצה חוזרת. עריכה ידנית של הקובץ ב-release הייתה נמחקת בריצה הבאה.
+    _tr = os.path.join(BASE, "data/trims.json")
+    trims = json.load(open(_tr))["trims"] if os.path.exists(_tr) else {}
     if skip:
         before = len(man)
         man = [r for r in man if r["path"] not in skip]
@@ -172,7 +178,13 @@ def main():
                 r, src = t
                 if not src: return (r, None, 0)
                 dst = os.path.join(d, r["asset"])
-                subprocess.run([FFMPEG, "-v", "error", "-y", "-i", src,
+                cut = trims.get(r["path"]) or {}
+                # -ss לפני -i מדלג מהר; -t אחריו קוצב את האורך שנשאר
+                pre = ["-ss", str(cut["start"])] if cut.get("start") else []
+                post = ["-t", str(cut["end"] - cut.get("start", 0))] if cut.get("end") else []
+                if cut:
+                    print(f"  חותך {r['asset']} → {cut.get('end')}ש'", flush=True)
+                subprocess.run([FFMPEG, "-v", "error", "-y", *pre, "-i", src, *post,
                                 "-ac", "1", "-b:a", "48k", "-ar", "44100",
                                 "-map_metadata", "-1", dst], capture_output=True)
                 if not os.path.exists(dst): return (r, None, 0)
