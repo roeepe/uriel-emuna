@@ -405,3 +405,28 @@ json.dump({
     "series": rows,
 }, open(f"{OUT}/{json.load(open(f'{D}/stats_path.json'))['path']}.json", "w"), ensure_ascii=False)
 print(f"\nנתוני הורדות: {sum(r['downloads'] for r in rows):,} אמיתיות")
+
+# ---------- גוגל: מפת אתר ו-robots ----------
+# 🚨 נבנים מהאינדקס, לא ביד: עמוד של חיבור חדש נכנס לגוגל בלי שאיש יזכור.
+#    הדפים הפרטיים (טיוטת הכתבה, חומר לעיתונות, דף הנתונים) אינם כאן
+#    ומסומנים noindex בקוד שלהם.
+SITE = "https://uriel-emuna.vercel.app"
+_today = datetime.now(IL).date().isoformat()
+_urls = [(SITE + "/", "1.0")]
+for c in col_index:
+    if c["kind"] == "collection":
+        _urls.append((f"{SITE}/c/{c['slug']}", "0.9"))
+    for w in (c.get("works") or [c]):
+        if not w.get("external"):
+            _urls.append((f"{SITE}/s/{w['slug']}", "0.8"))
+open("site/public/sitemap.xml", "w").write(
+    '<?xml version="1.0" encoding="UTF-8"?>\n'
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    + "".join(f"  <url><loc>{u}</loc><lastmod>{_today}</lastmod>"
+              f"<priority>{p}</priority></url>\n" for u, p in _urls)
+    + "</urlset>\n")
+open("site/public/robots.txt", "w").write(
+    "User-agent: *\nAllow: /\n"
+    "Disallow: /press\nDisallow: /press-kit\nDisallow: /data/\n"
+    f"Sitemap: {SITE}/sitemap.xml\n")
+print(f"מפת אתר: {len(_urls)} כתובות")

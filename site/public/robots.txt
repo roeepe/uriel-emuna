@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /press
+Disallow: /press-kit
+Disallow: /data/
+Sitemap: https://uriel-emuna.vercel.app/sitemap.xml
